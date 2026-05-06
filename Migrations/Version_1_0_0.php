@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+namespace MauticPlugin\MauticContentBlockBundle\Migrations;
+
+use Doctrine\DBAL\Schema\Schema;
+use Doctrine\DBAL\Schema\SchemaException;
+use Mautic\IntegrationsBundle\Migration\AbstractMigration;
+
+class Version_1_0_0 extends AbstractMigration
+{
+    private string $table = 'content_blocks';
+
+    protected function isApplicable(Schema $schema): bool
+    {
+        try {
+            // If the table already exists (e.g. created manually), skip creation
+            $schema->getTable($this->concatPrefix($this->table));
+            return false;
+        } catch (SchemaException $e) {
+            // Table does not exist — migration should run
+            return true;
+        }
+    }
+
+    protected function up(): void
+    {
+        $prefix = $this->tablePrefix;
+        $table  = $prefix . $this->table;
+
+        $this->addSql("
+            CREATE TABLE `{$table}` (
+                `id`                  INT UNSIGNED AUTO_INCREMENT NOT NULL,
+                `is_published`        TINYINT(1) NOT NULL DEFAULT 1,
+                `date_added`          DATETIME DEFAULT NULL,
+                `created_by`          INT DEFAULT NULL,
+                `created_by_user`     VARCHAR(191) DEFAULT NULL,
+                `date_modified`       DATETIME DEFAULT NULL,
+                `modified_by`         INT DEFAULT NULL,
+                `modified_by_user`    VARCHAR(191) DEFAULT NULL,
+                `checked_out`         DATETIME DEFAULT NULL,
+                `checked_out_by`      INT DEFAULT NULL,
+                `checked_out_by_user` VARCHAR(191) DEFAULT NULL,
+                `name`                VARCHAR(191) NOT NULL,
+                `category`            VARCHAR(100) DEFAULT NULL,
+                `html_content`        LONGTEXT NOT NULL,
+                `thumbnail`           LONGTEXT DEFAULT NULL,
+                PRIMARY KEY (`id`)
+            ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB
+        ");
+    }
+}

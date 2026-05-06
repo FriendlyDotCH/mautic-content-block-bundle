@@ -1,0 +1,9 @@
+mautic:
+    contentblock:
+        menu:
+            index: Content Blocks
+            in: Content Blocks
+        form:
+            name: Block Name
+            category: Category
+            html_content: HTML Content

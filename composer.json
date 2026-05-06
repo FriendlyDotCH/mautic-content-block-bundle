@@ -1,0 +1,18 @@
+{
+    "name": "friendly-automate/mautic-content-block-bundle",
+    "description": "Saved reusable content blocks for the Mautic 5 GrapesJS builder",
+    "type": "mautic-plugin",
+    "version": "1.0.0",
+    "require": {
+        "php": ">=8.1",
+        "mautic/core-lib": "^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "MauticPlugin\\MauticContentBlockBundle\\": ""
+        }
+    },
+    "extra": {
+        "install-directory-name": "MauticContentBlockBundle"
+    }
+}

@@ -1,0 +1,536 @@
+{% extends '@MauticCore/Default/content.html.twig' %}
+
+{% block headerTitle %}Content Blocks{% endblock %}
+{% block mauticContent %}contentBlock{% endblock %}
+
+{% block actions %}
+  <a class="btn btn-primary btn-lg" id="cb-new-btn" href="javascript:void(0)">
+    <i class="ri-add-line"></i> New
+  </a>
+{% endblock %}
+
+{% block content %}
+
+{# ── New Block Modal ─────────────────────────────────────────── #}
+<div id="cb-new-modal" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal">&times;</button>
+      <h4 class="modal-title">New Content Block</h4>
+    </div>
+    <div class="modal-body">
+      <div class="row">
+        <div class="col-sm-8">
+          <div class="form-group">
+            <label>Block Name <span class="text-danger">*</span></label>
+            <input type="text" id="cb-new-name" class="form-control" placeholder="e.g. CH Footer, DE Hero…">
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="form-group">
+            <label>Category</label>
+            <input type="text" id="cb-new-category" class="form-control" placeholder="General">
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Icon <small class="text-muted">(optional)</small></label>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span id="cb-new-icon-preview" style="min-width:32px;min-height:28px;display:inline-block;"></span>
+          <span id="cb-new-icon-label" style="font-size:12px;color:#999;">None selected — click an emoji below</span>
+        </div>
+        <div id="cb-new-emoji-grid" style="background:#f8f8f8;border:1px solid #ddd;border-radius:6px;padding:10px;max-height:120px;overflow-y:auto;line-height:1.6;"></div>
+      </div>
+      <div class="form-group">
+        <label>MJML / HTML Code <span class="text-danger">*</span></label>
+        <textarea id="cb-new-code" class="form-control" rows="14"
+                  placeholder="Paste your mj-section or mj-hero code here…"
+                  style="font-family:'Courier New',monospace;font-size:12px;line-height:1.5;resize:vertical;"></textarea>
+      </div>
+      <div id="cb-new-err" class="text-danger" style="display:none;margin-top:4px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="cb-new-save">Save Block</button>
+    </div>
+  </div></div>
+</div>
+
+{# ── Rename Modal ───────────────────────────────────────────── #}
+<div id="cb-rename-modal" class="modal fade" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal">&times;</button>
+      <h4 class="modal-title">Rename Block</h4>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Block Name</label>
+        <input type="text" id="cb-rename-name" class="form-control"></div>
+      <div class="form-group"><label>Category</label>
+        <input type="text" id="cb-rename-category" class="form-control"></div>
+      <div class="form-group">
+        <label>Icon <small class="text-muted">(optional)</small></label>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span id="cb-rename-icon-preview" style="min-width:32px;min-height:28px;display:inline-block;"></span>
+          <span id="cb-rename-icon-label" style="font-size:12px;color:#999;"></span>
+        </div>
+        <div id="cb-rename-emoji-grid" style="background:#f8f8f8;border:1px solid #ddd;border-radius:6px;padding:10px;max-height:120px;overflow-y:auto;line-height:1.6;"></div>
+        <input type="hidden" id="cb-rename-icon">
+      </div>
+      <input type="hidden" id="cb-rename-id">
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="cb-rename-save">Save</button>
+    </div>
+  </div></div>
+</div>
+
+{# ── Code Modal ─────────────────────────────────────────────── #}
+<div id="cb-code-modal" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal">&times;</button>
+      <h4 class="modal-title">View / Edit Code</h4>
+    </div>
+    <div class="modal-body">
+      <textarea id="cb-code-html" class="form-control" rows="20"
+                style="font-family:'Courier New',monospace;font-size:12px;line-height:1.5;"></textarea>
+      <input type="hidden" id="cb-code-id">
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      <button type="button" class="btn btn-primary" id="cb-code-save">Save Code</button>
+    </div>
+  </div></div>
+</div>
+
+<script>
+(function(){
+  if (document.getElementById('cb-styles')) return;
+  var s = document.createElement('style'); s.id = 'cb-styles';
+  s.textContent = [
+    /* Table */
+    '#cb-table{table-layout:auto}',
+    '#cb-table td,#cb-table th{vertical-align:middle;padding:8px 10px;}',
+    '#cb-table th{white-space:nowrap;user-select:none;}',
+    '#cb-table th.cb-sortable{cursor:pointer;}',
+    '#cb-table th.cb-sortable:hover{background:#f0f0f0;}',
+    '#cb-table th .cb-sort-icon{display:inline-block;margin-left:4px;opacity:.35;font-size:11px;}',
+    '#cb-table th.cb-sort-asc .cb-sort-icon,#cb-table th.cb-sort-desc .cb-sort-icon{opacity:1;color:#00b19d;}',
+    /* Name link like Mautic native */
+    '.cb-name-text{color:#4e5d6c;font-weight:500;}',
+    '.cb-name-text:hover{color:#00b19d;text-decoration:underline;}',
+    /* Dots menu */
+    '.cb-dots-wrap{position:relative;display:inline-block}',
+    '.cb-dots-btn{background:none;border:none;padding:2px 7px;cursor:pointer;color:#bbb;font-size:18px;line-height:1;border-radius:4px}',
+    '.cb-dots-btn:hover{background:#eee;color:#555}',
+    '.cb-dropdown{display:none;position:absolute;left:0;top:100%;z-index:9999;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:160px;overflow:hidden}',
+    '.cb-dropdown.open{display:block}',
+    '.cb-dropdown a{display:flex;align-items:center;gap:8px;padding:9px 14px;font-size:13px;color:#444;text-decoration:none;cursor:pointer}',
+    '.cb-dropdown a:hover{background:#f5f5f5}',
+    '.cb-dropdown .cb-delete-btn{color:#d9534f}',
+    '.cb-dropdown a i{font-size:14px;width:16px;text-align:center}',
+    /* Toggle */
+    '.cb-toggle.btn-ghost{padding:0 2px;line-height:1;display:inline-flex;align-items:center;vertical-align:middle;border:none;background:none;}',
+    /* Emoji */
+    '.cb-emoji-opt{cursor:pointer;padding:3px 4px;border-radius:4px;display:inline-block;line-height:1;}',
+    '.cb-emoji-opt:hover{background:#e0e0e0}',
+    '.cb-emoji-opt.selected{background:#c8e0c8;outline:2px solid #7c9a6d;}'
+  ].join('');
+  document.head.appendChild(s);
+})();
+</script>
+
+<div class="page-list">
+  <table class="table table-hover" id="cb-table">
+    <thead>
+      <tr>
+        <th class="col-has-checkbox" style="width:32px;"><input type="checkbox" id="cb-check-all" /></th>
+        <th style="width:32px;"></th>
+        <th class="cb-sortable" data-col="name" data-type="str">Name <span class="cb-sort-icon">↕</span></th>
+        <th class="cb-sortable" data-col="category" data-type="str" style="width:140px;">Category <span class="cb-sort-icon">↕</span></th>
+        <th class="cb-sortable" data-col="date" data-type="str" style="width:170px;">Date Added <span class="cb-sort-icon">↕</span></th>
+        <th class="cb-sortable" data-col="id" data-type="num" style="width:60px;text-align:right;">ID <span class="cb-sort-icon">↕</span></th>
+      </tr>
+    </thead>
+    <tbody id="cb-tbody">
+      {% if items is empty %}
+        <tr><td colspan="6" class="text-center text-muted" style="padding:40px;">
+          No content blocks yet. Click <strong>New</strong> to create one, or open the email builder and use the toolbar save button.
+        </td></tr>
+      {% else %}
+        {% for item in items %}
+          {% set pub = item.is_published %}
+          <tr id="cb-row-{{ item.id }}"
+              data-name="{{ item.name|lower|e('html_attr') }}"
+              data-category="{{ (item.category ?? 'General')|lower|e('html_attr') }}"
+              data-date="{{ item.date_added ?? '' }}"
+              data-id="{{ item.id }}">
+            <td class="col-has-checkbox"><input type="checkbox" class="cb-row-check" value="{{ item.id }}" /></td>
+            <td>
+              <div class="cb-dots-wrap">
+                <button class="cb-dots-btn" title="Actions">&#8942;</button>
+                <div class="cb-dropdown">
+                  <a class="cb-rename-btn"
+                     data-id="{{ item.id }}"
+                     data-name="{{ item.name|e('html_attr') }}"
+                     data-category="{{ (item.category ?? 'General')|e('html_attr') }}"
+                     data-icon="{{ (item.icon ?? '')|e('html_attr') }}">
+                    <i class="ri-edit-line"></i> Rename
+                  </a>
+                  <a class="cb-code-btn" data-id="{{ item.id }}" data-html="{{ item.html_content|e('html_attr') }}">
+                    <i class="ri-code-line"></i> Edit Code
+                  </a>
+                  <a class="cb-delete-btn" data-id="{{ item.id }}" data-name="{{ item.name|e('html_attr') }}">
+                    <i class="ri-delete-bin-line"></i> Delete
+                  </a>
+                </div>
+              </div>
+            </td>
+            <td>
+              <a class="cb-toggle btn btn-ghost btn-xs" href="javascript:void(0)"
+                 data-id="{{ item.id }}" data-published="{{ pub ? '1' : '0' }}">
+                <i class="ri-toggle-{{ pub ? 'fill' : 'line' }} font-size-20" style="color:{{ pub ? '#00b19d' : '#bbb' }};"></i>
+              </a>
+              <span class="cb-icon-cell" data-emoji="{{ (item.icon ?? '')|e('html_attr') }}"
+                    style="display:inline-block;width:20px;height:20px;vertical-align:middle;margin:0 4px 0 2px;"></span>
+              <a class="cb-name-text cb-code-btn" href="javascript:void(0)"
+                 data-id="{{ item.id }}" data-html="{{ item.html_content|e('html_attr') }}">{{ item.name }}</a>
+            </td>
+            <td>{{ item.category ?? 'General' }}</td>
+            <td class="text-muted">{{ item.date_added ?? '' }}</td>
+            <td class="text-muted" style="text-align:right;">{{ item.id }}</td>
+          </tr>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function() {
+
+    // ── Icon definitions (same set as GrapesJS builder) ──────────
+    var SVG_ICONS = {
+        header:   '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="52" height="16" rx="2" fill="currentColor" opacity=".9"/><line x1="4" y1="28" x2="56" y2="28"/><line x1="4" y1="36" x2="44" y2="36"/><line x1="4" y1="44" x2="50" y2="44"/></svg>',
+        footer:   '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="56" y2="6"/><line x1="4" y1="14" x2="44" y2="14"/><line x1="4" y1="22" x2="50" y2="22"/><rect x="4" y="30" width="52" height="16" rx="2" fill="currentColor" opacity=".9"/></svg>',
+        hero:     '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="52" height="30" rx="2"/><line x1="14" y1="16" x2="46" y2="16" stroke-width="3"/><line x1="18" y1="23" x2="42" y2="23"/><rect x="20" y="38" width="20" height="8" rx="3" fill="currentColor" opacity=".8"/></svg>',
+        text:     '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="10" x2="56" y2="10"/><line x1="4" y1="20" x2="56" y2="20"/><line x1="4" y1="30" x2="56" y2="30"/><line x1="4" y1="40" x2="36" y2="40"/></svg>',
+        image:    '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="6" width="52" height="38" rx="3"/><circle cx="18" cy="18" r="5" fill="currentColor" opacity=".7"/><polyline points="4,38 18,24 30,32 42,20 56,34" stroke-width="2.5"/></svg>',
+        button:   '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="10" x2="56" y2="10"/><line x1="4" y1="18" x2="44" y2="18"/><rect x="10" y="28" width="40" height="14" rx="7" stroke="currentColor" fill="currentColor" opacity=".2"/><line x1="22" y1="35" x2="38" y2="35" stroke-width="2"/></svg>',
+        columns2: '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="24" height="42" rx="2"/><rect x="32" y="4" width="24" height="42" rx="2"/></svg>',
+        columns3: '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="17" height="42" rx="2"/><rect x="21" y="4" width="17" height="42" rx="2"/><rect x="40" y="4" width="17" height="42" rx="2"/></svg>',
+        divider:  '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="14" x2="56" y2="14"/><line x1="4" y1="25" x2="56" y2="25" stroke-width="4"/><line x1="4" y1="36" x2="56" y2="36"/></svg>',
+        social:   '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="25" r="7"/><circle cx="30" cy="25" r="7"/><circle cx="48" cy="25" r="7"/></svg>',
+        video:    '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="6" width="52" height="38" rx="3"/><polygon points="24,16 24,34 42,25" fill="currentColor" opacity=".8"/></svg>',
+        cta:      '<svg viewBox="0 0 60 50" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="10" x2="56" y2="10"/><line x1="4" y1="18" x2="44" y2="18"/><rect x="4" y="28" width="52" height="14" rx="7" fill="currentColor" opacity=".25"/><line x1="16" y1="35" x2="44" y2="35" stroke-width="2.5"/></svg>',
+    };
+    var SVG_LABELS = {
+        header:'Header', footer:'Footer', hero:'Hero', text:'Text', image:'Image',
+        button:'Button', columns2:'2 Cols', columns3:'3 Cols', divider:'Divider',
+        social:'Social', video:'Video', cta:'CTA',
+    };
+    var FLAG_EMOJIS = [
+        '🇨🇭','🇩🇪','🇫🇷','🇮🇹','🇬🇧','🇺🇸','🇦🇹','🇧🇪','🇳🇱','🇸🇪',
+        '🇪🇸','🇵🇱','🇨🇿','🇸🇰','🇭🇺','🇷🇴','🇷🇸','🇭🇷','🇧🇬','🇸🇮',
+    ];
+
+    // ── Twemoji ──────────────────────────────────────────────────
+    function emojiUrl(emoji) {
+        var cp = [];
+        for (var i = 0; i < emoji.length; ) {
+            var code = emoji.codePointAt(i);
+            cp.push(code.toString(16));
+            i += code > 0xFFFF ? 2 : 1;
+        }
+        return 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0/assets/svg/' +
+               cp.filter(function(c){return c!=='fe0f';}).join('-') + '.svg';
+    }
+    function renderIconCell(span, icon) {
+        span.innerHTML = '';
+        if (!icon) return;
+        if (SVG_ICONS[icon]) {
+            span.innerHTML = SVG_ICONS[icon];
+            var svg = span.querySelector('svg');
+            if (svg) svg.style.cssText = 'width:18px;height:18px;vertical-align:middle;color:#666;';
+        } else {
+            var img = document.createElement('img');
+            img.src = emojiUrl(icon);
+            img.style.cssText = 'width:20px;height:20px;vertical-align:middle;';
+            img.onerror = function(){ span.textContent = icon; };
+            span.appendChild(img);
+        }
+    }
+    function renderIconPreview(spanId, icon) {
+        var span = document.getElementById(spanId); if (!span) return;
+        span.innerHTML = '';
+        if (!icon) return;
+        if (SVG_ICONS[icon]) {
+            // SVG layout icon
+            span.innerHTML = SVG_ICONS[icon];
+            var svg = span.querySelector('svg');
+            if (svg) svg.style.cssText = 'width:28px;height:28px;color:#555;';
+        } else {
+            // Emoji/flag via Twemoji
+            var img = document.createElement('img');
+            img.src = emojiUrl(icon);
+            img.style.cssText = 'width:28px;height:28px;vertical-align:middle;';
+            img.onerror = function(){ span.textContent = icon; };
+            span.appendChild(img);
+        }
+    }
+    document.querySelectorAll('.cb-icon-cell').forEach(function(s){ renderIconCell(s, s.dataset.emoji); });
+
+    // ── Icon grid builder ────────────────────────────────────────
+    function buildIconGrid(gridEl, previewId, labelId, hiddenId, initial) {
+        gridEl.innerHTML = ''; gridEl._sel = initial || '';
+        var secStyle = 'font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;';
+
+        // Layout section
+        var secLayout = document.createElement('div');
+        secLayout.style.cssText = secStyle; secLayout.textContent = 'Layout';
+        gridEl.appendChild(secLayout);
+        var rowLayout = document.createElement('div');
+        rowLayout.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;';
+        Object.keys(SVG_ICONS).forEach(function(id){
+            var span = document.createElement('span');
+            span.className = 'cb-icon-opt' + (id === gridEl._sel ? ' selected' : '');
+            span.dataset.icon = id;
+            span.title = SVG_LABELS[id];
+            span.style.cssText = 'cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:5px;color:#555;flex-shrink:0;border:1px solid #ddd;';
+            span.innerHTML = SVG_ICONS[id];
+            span.querySelector('svg').style.cssText = 'width:26px;height:26px;pointer-events:none;';
+            rowLayout.appendChild(span);
+        });
+        gridEl.appendChild(rowLayout);
+
+        // Language section
+        var secLang = document.createElement('div');
+        secLang.style.cssText = secStyle; secLang.textContent = 'Language';
+        gridEl.appendChild(secLang);
+        var rowLang = document.createElement('div');
+        rowLang.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;';
+        FLAG_EMOJIS.forEach(function(e){
+            var span = document.createElement('span');
+            span.className = 'cb-icon-opt' + (e === gridEl._sel ? ' selected' : '');
+            span.dataset.icon = e;
+            span.title = e;
+            span.style.cssText = 'cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:5px;flex-shrink:0;border:1px solid #ddd;';
+            var img = document.createElement('img');
+            img.src = emojiUrl(e);
+            img.style.cssText = 'width:24px;height:24px;pointer-events:none;';
+            img.onerror = function(){ span.textContent = e; };
+            span.appendChild(img);
+            rowLang.appendChild(span);
+        });
+        gridEl.appendChild(rowLang);
+        // Render initial preview
+        renderIconPreview(previewId, gridEl._sel);
+        var lbl = document.getElementById(labelId);
+        if (lbl) lbl.textContent = gridEl._sel ? 'Selected (click again to clear)' : 'None selected — click an icon below';
+
+        // Click handler
+        gridEl.addEventListener('click', function(ev){
+            var opt = ev.target.closest('.cb-icon-opt'); if (!opt) return;
+            var icon = opt.dataset.icon, same = gridEl._sel === icon;
+            gridEl.querySelectorAll('.cb-icon-opt.selected').forEach(function(o){
+                o.classList.remove('selected');
+                o.style.background = '';
+            });
+            gridEl._sel = same ? '' : icon;
+            if (!same) { opt.classList.add('selected'); opt.style.background = '#d0e8d0'; }
+            if (hiddenId) document.getElementById(hiddenId).value = gridEl._sel;
+            renderIconPreview(previewId, gridEl._sel);
+            if (lbl) lbl.textContent = gridEl._sel ? 'Selected (click again to clear)' : 'None selected — click an icon below';
+        });
+
+        // Highlight initial selection
+        if (gridEl._sel) {
+            var initOpt = gridEl.querySelector('[data-icon="' + CSS.escape(gridEl._sel) + '"]');
+            if (initOpt) { initOpt.classList.add('selected'); initOpt.style.background = '#d0e8d0'; }
+        }
+    }
+
+    // ── Utility ─────────────────────────────────────────────────
+    function getCsrf(){ return typeof mauticAjaxCsrf !== 'undefined' ? mauticAjaxCsrf : ''; }
+    function post(url, body){
+        return fetch(url,{ method:'POST', credentials:'same-origin',
+            headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest','X-CSRF-Token':getCsrf()},
+            body: body ? body.toString() : '' });
+    }
+    function closeDropdowns(){ document.querySelectorAll('.cb-dropdown.open').forEach(function(d){d.classList.remove('open');}); }
+
+    // ── New Block ────────────────────────────────────────────────
+    var newSaveBtn = document.getElementById('cb-new-save');
+    document.getElementById('cb-new-btn').addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation();
+        // Always reset button state on open
+        newSaveBtn.textContent = 'Save Block'; newSaveBtn.disabled = false;
+        document.getElementById('cb-new-name').value     = '';
+        document.getElementById('cb-new-category').value = '';
+        document.getElementById('cb-new-code').value     = '';
+        document.getElementById('cb-new-err').style.display = 'none';
+        buildIconGrid(document.getElementById('cb-new-emoji-grid'), 'cb-new-icon-preview', 'cb-new-icon-label', null, '');
+        mQuery('#cb-new-modal').modal('show');
+        setTimeout(function(){ document.getElementById('cb-new-name').focus(); }, 300);
+    });
+    newSaveBtn.addEventListener('click', function(){
+        var name = document.getElementById('cb-new-name').value.trim();
+        var code = document.getElementById('cb-new-code').value.trim();
+        var errEl = document.getElementById('cb-new-err');
+        if (!name){ errEl.textContent = 'Block name is required.'; errEl.style.display = 'block'; return; }
+        if (!code){ errEl.textContent = 'Code is required.'; errEl.style.display = 'block'; return; }
+        errEl.style.display = 'none';
+        var icon = document.getElementById('cb-new-emoji-grid')._sel || '';
+        var cat  = document.getElementById('cb-new-category').value.trim() || 'General';
+        newSaveBtn.textContent = 'Saving…'; newSaveBtn.disabled = true;
+        var params = new URLSearchParams();
+        params.append('name', name); params.append('icon', icon);
+        params.append('htmlContent', code); params.append('category', cat);
+        post(mauticBasePath + '/s/content-blocks/save', params)
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                // Reset button first, then handle result
+                newSaveBtn.textContent = 'Save Block'; newSaveBtn.disabled = false;
+                if (data.error){ errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+                mQuery('#cb-new-modal').modal('hide');
+                appendRow(data);
+            })
+            .catch(function(){
+                newSaveBtn.textContent = 'Save Block'; newSaveBtn.disabled = false;
+                errEl.textContent = 'Save failed — see console.'; errEl.style.display = 'block';
+            });
+    });
+
+    function appendRow(data) {
+        var tbody = document.getElementById('cb-tbody');
+        var empty = tbody.querySelector('td[colspan]'); if (empty) empty.closest('tr').remove();
+        var tr = document.createElement('tr');
+        tr.id = 'cb-row-' + data.id;
+        tr.dataset.name     = (data.name||'').toLowerCase();
+        tr.dataset.category = (data.category||'general').toLowerCase();
+        tr.dataset.date     = 'just now';
+        tr.dataset.id       = data.id;
+        tr.innerHTML =
+            '<td class="col-has-checkbox"><input type="checkbox" class="cb-row-check" value="' + data.id + '"></td>' +
+            '<td><div class="cb-dots-wrap"><button class="cb-dots-btn">&#8942;</button><div class="cb-dropdown">' +
+            '<a class="cb-rename-btn" data-id="'+data.id+'" data-name="'+esc(data.name)+'" data-category="'+(data.category||'General')+'" data-icon="'+(data.icon||'')+'"><i class="ri-edit-line"></i> Rename</a>' +
+            '<a class="cb-code-btn" data-id="'+data.id+'" data-html="'+esc(data.htmlContent||'')+'"><i class="ri-code-line"></i> Edit Code</a>' +
+            '<a class="cb-delete-btn" data-id="'+data.id+'" data-name="'+esc(data.name)+'"><i class="ri-delete-bin-line"></i> Delete</a>' +
+            '</div></div></td>' +
+            '<td><a class="cb-toggle btn btn-ghost btn-xs" href="javascript:void(0)" data-id="'+data.id+'" data-published="1"><i class="ri-toggle-fill font-size-20" style="color:#00b19d;"></i></a>' +
+            '<span class="cb-icon-cell" data-emoji="'+(data.icon||'')+'" style="display:inline-block;width:20px;height:20px;vertical-align:middle;margin:0 4px 0 2px;"></span>' +
+            '<a class="cb-name-text cb-code-btn" href="javascript:void(0)" data-id="'+data.id+'" data-html="'+esc(data.htmlContent||'')+'">'+escHtml(data.name||'')+'</a></td>' +
+            '<td>'+(data.category||'General')+'</td>' +
+            '<td class="text-muted">just now</td>' +
+            '<td class="text-muted" style="text-align:right;">'+data.id+'</td>';
+        tbody.insertBefore(tr, tbody.firstChild);
+        tr.querySelectorAll('.cb-icon-cell').forEach(function(s){ renderIconCell(s, s.dataset.emoji); });
+    }
+    function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+    function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // ── Column sort ──────────────────────────────────────────────
+    var sortState = { col: null, dir: 1 };
+    document.querySelectorAll('#cb-table th.cb-sortable').forEach(function(th){
+        th.addEventListener('click', function(){
+            var col  = th.dataset.col;
+            var type = th.dataset.type;
+            var dir  = (sortState.col === col) ? -sortState.dir : 1;
+            sortState = { col: col, dir: dir };
+            // Update header icons
+            document.querySelectorAll('#cb-table th.cb-sortable').forEach(function(h){
+                h.classList.remove('cb-sort-asc','cb-sort-desc');
+                h.querySelector('.cb-sort-icon').textContent = '↕';
+            });
+            th.classList.add(dir === 1 ? 'cb-sort-asc' : 'cb-sort-desc');
+            th.querySelector('.cb-sort-icon').textContent = dir === 1 ? '↑' : '↓';
+            // Sort rows
+            var tbody = document.getElementById('cb-tbody');
+            var rows  = Array.prototype.slice.call(tbody.querySelectorAll('tr[id^="cb-row-"]'));
+            rows.sort(function(a, b){
+                var av = a.dataset[col] || '', bv = b.dataset[col] || '';
+                if (type === 'num') return dir * (parseInt(av,10) - parseInt(bv,10));
+                return dir * av.localeCompare(bv);
+            });
+            rows.forEach(function(r){ tbody.appendChild(r); });
+        });
+    });
+
+    // ── Dropdowns ────────────────────────────────────────────────
+    document.addEventListener('click', function(e){ if (!e.target.closest('.cb-dots-wrap')) closeDropdowns(); });
+    document.addEventListener('click', function(e){
+        var btn = e.target.closest('.cb-dots-btn'); if (!btn) return; e.stopPropagation();
+        var dd = btn.closest('.cb-dots-wrap').querySelector('.cb-dropdown');
+        var was = dd.classList.contains('open'); closeDropdowns(); if (!was) dd.classList.add('open');
+    });
+
+    // ── Toggle ───────────────────────────────────────────────────
+    document.addEventListener('click', function(e){
+        var btn = e.target.closest('.cb-toggle'); if (!btn) return;
+        var p = btn.dataset.published !== '1'; btn.dataset.published = p ? '1' : '0';
+        var ic = btn.querySelector('i');
+        if (ic){ ic.className = 'ri-toggle-'+(p?'fill':'line')+' font-size-20'; ic.style.color = p ? '#00b19d' : '#bbb'; }
+        post(mauticBasePath + '/s/content-blocks/toggle/' + btn.dataset.id);
+    });
+
+    // ── Check all ────────────────────────────────────────────────
+    var ca = document.getElementById('cb-check-all');
+    if (ca) ca.addEventListener('change', function(){ document.querySelectorAll('.cb-row-check').forEach(function(c){ c.checked = ca.checked; }); });
+
+    // ── Delete ───────────────────────────────────────────────────
+    document.addEventListener('click', function(e){
+        var btn = e.target.closest('.cb-delete-btn'); if (!btn) return; closeDropdowns();
+        if (!confirm('Delete "'+btn.dataset.name+'"? This cannot be undone.')) return;
+        var row = document.getElementById('cb-row-'+btn.dataset.id);
+        if (row){ row.style.opacity='0.3'; row.style.pointerEvents='none'; }
+        post(mauticBasePath+'/s/content-blocks/delete/'+btn.dataset.id).then(function(){ if (row) row.remove(); });
+    });
+
+    // ── Rename ───────────────────────────────────────────────────
+    document.addEventListener('click', function(e){
+        var btn = e.target.closest('.cb-rename-btn'); if (!btn) return; closeDropdowns();
+        document.getElementById('cb-rename-id').value       = btn.dataset.id;
+        document.getElementById('cb-rename-name').value     = btn.dataset.name;
+        document.getElementById('cb-rename-category').value = btn.dataset.category;
+        document.getElementById('cb-rename-icon').value     = btn.dataset.icon || '';
+        buildIconGrid(document.getElementById('cb-rename-emoji-grid'),'cb-rename-icon-preview','cb-rename-icon-label','cb-rename-icon', btn.dataset.icon||'');
+        mQuery('#cb-rename-modal').modal('show');
+    });
+    document.getElementById('cb-rename-save').addEventListener('click', function(){
+        var id   = document.getElementById('cb-rename-id').value;
+        var name = document.getElementById('cb-rename-name').value.trim();
+        var cat  = document.getElementById('cb-rename-category').value.trim() || 'General';
+        var icon = document.getElementById('cb-rename-icon').value.trim();
+        if (!name){ alert('Name is required.'); return; }
+        var row = document.getElementById('cb-row-'+id);
+        if (row){
+            row.querySelector('.cb-name-text').textContent = name;
+            row.dataset.name = name.toLowerCase();
+            var rb = row.querySelector('.cb-rename-btn');
+            if (rb){ rb.dataset.name=name; rb.dataset.category=cat; rb.dataset.icon=icon; }
+            var ic = row.querySelector('.cb-icon-cell');
+            if (ic){ ic.dataset.emoji=icon; renderIconCell(ic, icon); }
+        }
+        mQuery('#cb-rename-modal').modal('hide');
+        post(mauticBasePath+'/s/content-blocks/edit/'+id, new URLSearchParams({name:name, category:cat, icon:icon}));
+    });
+
+    // ── Edit Code ────────────────────────────────────────────────
+    document.addEventListener('click', function(e){
+        var btn = e.target.closest('.cb-code-btn'); if (!btn) return; closeDropdowns();
+        document.getElementById('cb-code-id').value = btn.dataset.id;
+        var tmp = document.createElement('textarea'); tmp.innerHTML = btn.dataset.html;
+        document.getElementById('cb-code-html').value = tmp.value;
+        mQuery('#cb-code-modal').modal('show');
+    });
+    document.getElementById('cb-code-save').addEventListener('click', function(){
+        var id = document.getElementById('cb-code-id').value;
+        mQuery('#cb-code-modal').modal('hide');
+        post(mauticBasePath+'/s/content-blocks/edit/'+id, new URLSearchParams({htmlContent: document.getElementById('cb-code-html').value}));
+    });
+
+})();
+</script>
+
+{% endblock %}
