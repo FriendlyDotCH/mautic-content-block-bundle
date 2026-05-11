@@ -10,24 +10,26 @@ use Mautic\CoreBundle\Doctrine\Mapping\ClassMetadataBuilder;
 use Mautic\CoreBundle\Entity\FormEntity;
 
 #[ORM\Entity]
-#[ORM\Table(name: 'content_blocks')]
+#[ORM\Table(name: 'friendly_content_blocks')]
 class ContentBlock extends FormEntity
 {
     private ?int $id = null;
 
     private string $name = '';
 
-    private string $category = 'General';
+    private ?string $category = null;
 
     private string $htmlContent = '';
 
     private ?string $thumbnail = null;
 
+    private ?string $icon = null;
+
     public static function loadMetadata(ORM\ClassMetadata $metadata): void
     {
         $builder = new ClassMetadataBuilder($metadata);
 
-        $builder->setTable('content_blocks')
+        $builder->setTable('friendly_content_blocks')
             ->setCustomRepositoryClass(ContentBlockRepository::class);
 
         $builder->addId();
@@ -46,6 +48,12 @@ class ContentBlock extends FormEntity
 
         $builder->createField('thumbnail', Types::TEXT)
             ->columnName('thumbnail')
+            ->nullable()
+            ->build();
+
+        $builder->createField('icon', Types::STRING)
+            ->columnName('icon')
+            ->length(20)
             ->nullable()
             ->build();
     }
@@ -68,12 +76,12 @@ class ContentBlock extends FormEntity
         return $this;
     }
 
-    public function getCategory(): string
+    public function getCategory(): ?string
     {
         return $this->category;
     }
 
-    public function setCategory(string $category): self
+    public function setCategory(?string $category): self
     {
         $this->isChanged('category', $category);
         $this->category = $category;
@@ -102,6 +110,19 @@ class ContentBlock extends FormEntity
     public function setThumbnail(?string $thumbnail): self
     {
         $this->thumbnail = $thumbnail;
+
+        return $this;
+    }
+
+    public function getIcon(): ?string
+    {
+        return $this->icon;
+    }
+
+    public function setIcon(?string $icon): self
+    {
+        $this->isChanged('icon', $icon);
+        $this->icon = $icon;
 
         return $this;
     }

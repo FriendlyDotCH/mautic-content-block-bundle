@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+namespace MauticPlugin\MauticContentBlockBundle\Migrations;
+
+use Doctrine\DBAL\Schema\Schema;
+use Doctrine\DBAL\Schema\SchemaException;
+use Mautic\IntegrationsBundle\Migration\AbstractMigration;
+
+class Version_1_0_2 extends AbstractMigration
+{
+    private string $table = 'friendly_content_blocks';
+
+    protected function isApplicable(Schema $schema): bool
+    {
+        if ($this->tablePrefix === '') {
+            return false;
+        }
+
+        try {
+            $schema->getTable($this->table);
+        } catch (SchemaException) {
+            return false;
+        }
+
+        try {
+            $schema->getTable($this->concatPrefix($this->table));
+            return false;
+        } catch (SchemaException) {
+            return true;
+        }
+    }
+
+    protected function up(): void
+    {
+        $this->addSql(
+            "RENAME TABLE `{$this->table}` TO `{$this->concatPrefix($this->table)}`"
+        );
+    }
+}

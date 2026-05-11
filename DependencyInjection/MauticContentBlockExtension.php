@@ -20,7 +20,7 @@ class MauticContentBlockExtension extends Extension implements PrependExtensionI
         // via prependExtensionConfig — this runs before any bundle loads and is reliable
         $container->prependExtensionConfig('twig', [
             'paths' => [
-                \dirname(__DIR__) . '/Views' => 'MauticContentBlock',
+                \dirname(__DIR__).'/Views' => 'MauticContentBlock',
             ],
         ]);
     }

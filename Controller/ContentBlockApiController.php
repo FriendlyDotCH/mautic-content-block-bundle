@@ -5,72 +5,95 @@ declare(strict_types=1);
 namespace MauticPlugin\MauticContentBlockBundle\Controller;
 
 use Doctrine\DBAL\Connection;
+use Mautic\CoreBundle\Helper\InputHelper;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Csrf\CsrfToken;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 class ContentBlockApiController extends AbstractController
 {
+    private const ALLOWED_CATEGORIES = ['general', 'header', 'footer', 'signature', 'legal', 'promotional'];
+
     public function __construct(
         private readonly Connection $db,
+        private readonly CsrfTokenManagerInterface $csrfTokenManager,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
-    // GET /s/content-blocks/list
     public function listAction(Request $request): JsonResponse
     {
         if (!$request->isXmlHttpRequest()) {
             throw $this->createAccessDeniedException();
         }
 
+        $table = MAUTIC_TABLE_PREFIX.'friendly_content_blocks';
+
         try {
             $rows = $this->db->fetchAllAssociative(
-                'SELECT id, name, icon, category, html_content, thumbnail FROM content_blocks WHERE is_published = 1 ORDER BY name ASC'
+                "SELECT id, name, icon, category, html_content, thumbnail FROM `{$table}` WHERE is_published = 1 ORDER BY name ASC"
             );
 
-            $blocks = array_map(fn($r) => [
+            $blocks = array_map(fn ($r) => [
                 'id'          => (int) $r['id'],
                 'name'        => $r['name'],
                 'icon'        => $r['icon'] ?? null,
-                'category'    => $r['category'] ?? 'General',
+                'category'    => $r['category'] ?? 'general',
                 'htmlContent' => $r['html_content'],
                 'thumbnail'   => $r['thumbnail'] ?? null,
             ], $rows);
 
             return new JsonResponse(['blocks' => $blocks]);
         } catch (\Throwable $e) {
-            return new JsonResponse(['error' => 'DB error: ' . $e->getMessage()], 500);
+            $this->logger->error('ContentBlock list failed: '.$e->getMessage());
+
+            return new JsonResponse(['error' => 'An error occurred.'], 500);
         }
     }
 
-    // POST /s/content-blocks/save
     public function saveAction(Request $request): JsonResponse
     {
         if (!$request->isXmlHttpRequest() || 'POST' !== $request->getMethod()) {
             throw $this->createAccessDeniedException();
         }
 
-        $name        = trim((string) $request->request->get('name', ''));
-        $htmlContent = trim((string) $request->request->get('htmlContent', ''));
-        $icon        = trim((string) $request->request->get('icon', ''));
+        $csrfToken = (string) $request->headers->get('X-CSRF-Token', '');
+        if (!$this->csrfTokenManager->isTokenValid(new CsrfToken('mautic_ajax_post', $csrfToken))) {
+            return new JsonResponse(['error' => 'Invalid CSRF token.'], 403);
+        }
+
+        $name        = trim(InputHelper::string((string) $request->request->get('name', '')));
+        $htmlContent = trim(InputHelper::html((string) $request->request->get('htmlContent', '')));
+        $category    = strtolower(trim(InputHelper::string((string) $request->request->get('category', 'general'))));
+        $iconRaw     = (string) $request->request->get('icon', '');
+        $icon        = mb_substr(strip_tags($iconRaw), 0, 20) ?: null;
 
         if ('' === $name) {
             return new JsonResponse(['error' => 'Block name is required.'], 400);
         }
+        if (mb_strlen($name) > 191) {
+            return new JsonResponse(['error' => 'Name must be 191 characters or fewer.'], 400);
+        }
         if ('' === $htmlContent) {
             return new JsonResponse(['error' => 'No HTML content to save.'], 400);
         }
+        if (!in_array($category, self::ALLOWED_CATEGORIES, true)) {
+            $category = 'general';
+        }
+
+        $table = MAUTIC_TABLE_PREFIX.'friendly_content_blocks';
 
         try {
-            $now = (new \DateTime())->format('Y-m-d H:i:s');
-
-            $this->db->insert('content_blocks', [
+            $this->db->insert($table, [
                 'name'         => $name,
-                'icon'         => $icon !== '' ? $icon : null,
+                'icon'         => $icon,
                 'html_content' => $htmlContent,
-                'category'     => 'General',
+                'category'     => $category,
                 'is_published' => 1,
-                'date_added'   => $now,
+                'date_added'   => (new \DateTime())->format('Y-m-d H:i:s'),
             ]);
 
             $id = (int) $this->db->lastInsertId();
@@ -78,13 +101,15 @@ class ContentBlockApiController extends AbstractController
             return new JsonResponse([
                 'id'          => $id,
                 'name'        => $name,
-                'icon'        => $icon !== '' ? $icon : null,
+                'icon'        => $icon,
                 'htmlContent' => $htmlContent,
-                'category'    => 'General',
+                'category'    => $category,
                 'thumbnail'   => null,
             ]);
         } catch (\Throwable $e) {
-            return new JsonResponse(['error' => 'Save failed: ' . $e->getMessage()], 500);
+            $this->logger->error('ContentBlock save failed: '.$e->getMessage());
+
+            return new JsonResponse(['error' => 'An error occurred.'], 500);
         }
     }
 }

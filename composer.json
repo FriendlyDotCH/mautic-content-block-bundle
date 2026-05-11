@@ -1,5 +1,5 @@
 {
-    "name": "friendly-automate/mautic-content-block-bundle",
+    "name": "friendlydotch/mautic-content-block-bundle",
     "description": "Saved reusable content blocks for the Mautic 5 GrapesJS builder",
     "type": "mautic-plugin",
     "version": "1.0.0",

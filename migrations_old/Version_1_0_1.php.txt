@@ -10,7 +10,7 @@ use Mautic\IntegrationsBundle\Migration\AbstractMigration;
 
 class Version_1_0_1 extends AbstractMigration
 {
-    private string $table = 'content_blocks';
+    private string $table = 'friendly_content_blocks';
 
     protected function isApplicable(Schema $schema): bool
     {

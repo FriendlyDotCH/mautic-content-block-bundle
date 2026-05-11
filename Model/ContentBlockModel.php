@@ -7,10 +7,10 @@ namespace MauticPlugin\MauticContentBlockBundle\Model;
 use Mautic\CoreBundle\Model\FormModel;
 use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlock;
 use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlockRepository;
-use MauticPlugin\MauticContentBlockBundle\Form\ContentBlockType;
-use Symfony\Component\Form\FormFactoryInterface;
-use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * @extends FormModel<ContentBlock>
+ */
 class ContentBlockModel extends FormModel
 {
     public function getRepository(): ContentBlockRepository
@@ -27,15 +27,6 @@ class ContentBlockModel extends FormModel
     public function getNameGetter(): string
     {
         return 'getName';
-    }
-
-    public function createForm($entity, FormFactoryInterface $formFactory, $action = null, $options = []): \Symfony\Component\Form\FormInterface
-    {
-        if ($action) {
-            $options['action'] = $action;
-        }
-
-        return $formFactory->create(ContentBlockType::class, $entity, $options);
     }
 
     public function getEntity($id = null): ?ContentBlock

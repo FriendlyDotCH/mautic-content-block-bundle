@@ -12,25 +12,16 @@
 
         <service id="MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockApiController"
                  public="true"
+                 autowire="true"
                  autoconfigure="true">
             <argument type="service" id="doctrine.dbal.default_connection" />
         </service>
 
         <service id="MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController"
                  public="true"
+                 autowire="true"
                  autoconfigure="true">
             <argument type="service" id="doctrine.dbal.default_connection" />
-            <argument type="service" id="twig" />
-        </service>
-
-        <service id="MauticPlugin\MauticContentBlockBundle\EventListener\BuilderAssetSubscriber"
-                 public="false">
-            <tag name="kernel.event_subscriber" />
-        </service>
-
-        <service id="MauticPlugin\MauticContentBlockBundle\EventListener\CsrfExcludeSubscriber"
-                 public="false">
-            <tag name="kernel.event_subscriber" />
         </service>
 
     </services>

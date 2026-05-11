@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'name'        => 'Content Blocks',
     'description' => 'Reusable saved content blocks for the GrapesJS page/email builder.',
-    'version'     => '1.0.0',
+    'version'     => '2.0.2',
     'author'      => 'Friendly Automate',
 
     'routes' => [
@@ -16,22 +16,28 @@ return [
                 'defaults'   => ['page' => 1],
             ],
             'mautic_contentblock_delete' => [
-                'path'       => '/content-blocks/delete/{objectId}',
-                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::deleteAction',
+                'path'         => '/content-blocks/delete/{objectId}',
+                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::deleteAction',
                 'requirements' => ['objectId' => '\d+'],
-                'methods'    => ['POST'],
+                'methods'      => ['POST'],
             ],
             'mautic_contentblock_toggle' => [
-                'path'       => '/content-blocks/toggle/{objectId}',
-                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::toggleAction',
+                'path'         => '/content-blocks/toggle/{objectId}',
+                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::toggleAction',
                 'requirements' => ['objectId' => '\d+'],
-                'methods'    => ['POST'],
+                'methods'      => ['POST'],
             ],
             'mautic_contentblock_edit_inline' => [
-                'path'       => '/content-blocks/edit/{objectId}',
-                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::editAction',
+                'path'         => '/content-blocks/edit/{objectId}',
+                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::editAction',
                 'requirements' => ['objectId' => '\d+'],
-                'methods'    => ['POST'],
+                'methods'      => ['POST'],
+            ],
+            'mautic_contentblock_edit_page' => [
+                'path'         => '/content-blocks/{objectId}/edit',
+                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::editPageAction',
+                'requirements' => ['objectId' => '\d+'],
+                'methods'      => ['GET', 'POST'],
             ],
             'mautic_contentblock_list_ajax' => [
                 'path'       => '/content-blocks/list',
@@ -62,6 +68,7 @@ return [
     'assets' => [
         'js' => [
             'plugins/MauticContentBlockBundle/Assets/js/contentblocks.grapesjs.js',
+            'plugins/MauticContentBlockBundle/Assets/js/contentblocks.admin.js',
         ],
     ],
 
