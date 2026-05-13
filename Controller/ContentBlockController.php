@@ -5,33 +5,52 @@ declare(strict_types=1);
 namespace MauticPlugin\MauticContentBlockBundle\Controller;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\Persistence\ManagerRegistry;
+use Mautic\CoreBundle\Controller\AbstractFormController;
+use Mautic\CoreBundle\Factory\ModelFactory;
 use Mautic\CoreBundle\Factory\PageHelperFactoryInterface;
+use Mautic\CoreBundle\Helper\CoreParametersHelper;
 use Mautic\CoreBundle\Helper\InputHelper;
+use Mautic\CoreBundle\Helper\UserHelper;
+use Mautic\CoreBundle\Security\Permissions\CorePermissions;
+use Mautic\CoreBundle\Service\FlashBag;
+use Mautic\CoreBundle\Translation\Translator;
+use MauticPlugin\MauticContentBlockBundle\Form\Type\ContentBlockType;
 use Psr\Log\LoggerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 
-class ContentBlockController extends AbstractController
+class ContentBlockController extends AbstractFormController
 {
     private const ALLOWED_CATEGORIES = ['general', 'header', 'footer', 'signature', 'legal', 'promotional'];
+    private const ORDER_COLUMNS      = ['name' => 'name', 'category' => 'category', 'date_added' => 'date_added', 'id' => 'id'];
 
     public function __construct(
         private readonly Connection $db,
         private readonly LoggerInterface $logger,
+        private readonly PageHelperFactoryInterface $pageHelperFactory,
+        ManagerRegistry $doctrine,
+        ModelFactory $modelFactory,
+        UserHelper $userHelper,
+        CoreParametersHelper $coreParametersHelper,
+        EventDispatcherInterface $dispatcher,
+        Translator $translator,
+        FlashBag $flashBag,
+        RequestStack $requestStack,
+        CorePermissions $security,
     ) {
+        parent::__construct($doctrine, $modelFactory, $userHelper, $coreParametersHelper, $dispatcher, $translator, $flashBag, $requestStack, $security);
     }
 
-    private const ORDER_COLUMNS = ['name' => 'name', 'category' => 'category', 'date_added' => 'date_added', 'id' => 'id'];
-
-    public function indexAction(Request $request, PageHelperFactoryInterface $pageHelperFactory, int $page = 1): Response
+    public function indexAction(Request $request, int $page = 1): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
         $session = $request->getSession();
 
-        // Search (session key matches Mautic convention)
         if ($request->query->has('search')) {
             $search = trim(InputHelper::string((string) $request->query->get('search', '')));
             $session->set('mautic.contentBlock.filter', $search);
@@ -39,13 +58,11 @@ class ContentBlockController extends AbstractController
             $search = (string) $session->get('mautic.contentBlock.filter', '');
         }
 
-        // Ordering (session keys match what tableheader.html.twig reads)
         if ($request->query->has('orderby')) {
             $orderBy = self::ORDER_COLUMNS[$request->query->get('orderby')] ?? 'name';
             $session->set('mautic.contentBlock.orderby', $orderBy);
         } else {
-            $orderBy = (string) $session->get('mautic.contentBlock.orderby', 'name');
-            $orderBy = self::ORDER_COLUMNS[$orderBy] ?? 'name';
+            $orderBy = self::ORDER_COLUMNS[(string) $session->get('mautic.contentBlock.orderby', 'name')] ?? 'name';
         }
 
         if ($request->query->has('orderbydir')) {
@@ -55,7 +72,7 @@ class ContentBlockController extends AbstractController
             $orderDir = 'DESC' === strtoupper((string) $session->get('mautic.contentBlock.orderbydir', 'ASC')) ? 'DESC' : 'ASC';
         }
 
-        $pageHelper = $pageHelperFactory->make('contentBlock', $page);
+        $pageHelper = $this->pageHelperFactory->make('contentBlock', $page);
         $limit      = $pageHelper->getLimit();
         $start      = $pageHelper->getStart();
         $table      = MAUTIC_TABLE_PREFIX.'friendly_content_blocks';
@@ -79,29 +96,112 @@ class ContentBlockController extends AbstractController
         $pageHelper->rememberPage($page);
 
         $route = $this->generateUrl('mautic_contentblock_index');
+        $tmpl  = $request->isXmlHttpRequest() ? $request->get('tmpl', 'index') : 'index';
 
-        $html = $this->renderView('@MauticContentBlock/ContentBlock/index.html.twig', [
-            'items'        => $items,
-            'page'         => $page,
-            'limit'        => $limit,
-            'totalItems'   => $total,
-            'searchValue'  => $search,
-            'currentRoute' => $route,
-        ]);
-
-        if ($request->isXmlHttpRequest()) {
-            return new JsonResponse([
-                'newContent'    => $html,
-                'route'         => $route,
+        return $this->delegateView([
+            'viewParameters'  => [
+                'items'       => $items,
+                'page'        => $page,
+                'limit'       => $limit,
+                'totalItems'  => $total,
+                'searchValue' => $search,
+                'tmpl'        => $tmpl,
+            ],
+            'contentTemplate' => '@MauticContentBlock/ContentBlock/index.html.twig',
+            'passthroughVars' => [
                 'mauticContent' => 'contentBlock',
-                'flashes'       => '',
-                'notifications' => '',
-            ]);
+                'route'         => $route,
+            ],
+        ]);
+    }
+
+    public function newAction(Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $route = $this->generateUrl('mautic_contentblock_new');
+        $form  = $this->createForm(ContentBlockType::class, [], ['action' => $route]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $d     = $form->getData();
+            $table = MAUTIC_TABLE_PREFIX.'friendly_content_blocks';
+
+            try {
+                $this->db->insert($table, [
+                    'name'         => $d['name'],
+                    'category'     => $d['category'] ?? 'general',
+                    'icon'         => '' !== (string) ($d['icon'] ?? '') ? mb_substr(strip_tags((string) $d['icon']), 0, 20) : null,
+                    'html_content' => self::cleanHtmlContent((string) ($d['htmlContent'] ?? '')),
+                    'is_published' => 1,
+                    'date_added'   => (new \DateTime())->format('Y-m-d H:i:s'),
+                ]);
+            } catch (\Throwable $e) {
+                $this->logger->error('ContentBlock new failed: '.$e->getMessage());
+            }
+
+            return $this->redirectToList($request);
         }
 
-        return new Response('<!DOCTYPE html><html><head><meta charset="UTF-8">
-            <script>window.location.replace("/s/dashboard");</script>
-        </head><body>Redirecting...</body></html>');
+        return $this->delegateView([
+            'viewParameters'  => ['form' => $form->createView(), 'item' => []],
+            'contentTemplate' => '@MauticContentBlock/ContentBlock/form.html.twig',
+            'passthroughVars' => [
+                'mauticContent' => 'contentBlockEdit',
+                'route'         => $route,
+            ],
+        ]);
+    }
+
+    public function editPageAction(Request $request, int $objectId): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $table = MAUTIC_TABLE_PREFIX.'friendly_content_blocks';
+        $row   = $this->db->fetchAssociative(
+            "SELECT id, name, icon, category, html_content FROM `{$table}` WHERE id = ?",
+            [$objectId]
+        );
+
+        if (false === $row) {
+            throw $this->createNotFoundException('Content block not found.');
+        }
+
+        $route = $this->generateUrl('mautic_contentblock_edit_page', ['objectId' => $objectId]);
+        $form  = $this->createForm(ContentBlockType::class, [
+            'name'        => $row['name'],
+            'category'    => $row['category'] ?? 'general',
+            'icon'        => $row['icon'] ?? '',
+            'htmlContent' => $row['html_content'],
+        ], ['action' => $route]);
+
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $d = $form->getData();
+
+            try {
+                $this->db->update($table, [
+                    'name'         => $d['name'],
+                    'category'     => $d['category'] ?? 'general',
+                    'icon'         => '' !== (string) ($d['icon'] ?? '') ? mb_substr(strip_tags((string) $d['icon']), 0, 20) : null,
+                    'html_content' => self::cleanHtmlContent((string) ($d['htmlContent'] ?? '')),
+                ], ['id' => $objectId]);
+            } catch (\Throwable $e) {
+                $this->logger->error('ContentBlock editPage failed: '.$e->getMessage());
+            }
+
+            return $this->redirectToList($request);
+        }
+
+        return $this->delegateView([
+            'viewParameters'  => ['form' => $form->createView(), 'item' => $row],
+            'contentTemplate' => '@MauticContentBlock/ContentBlock/form.html.twig',
+            'passthroughVars' => [
+                'mauticContent' => 'contentBlockEdit',
+                'route'         => $route,
+            ],
+        ]);
     }
 
     public function toggleAction(Request $request, int $objectId): JsonResponse
@@ -157,7 +257,7 @@ class ContentBlockController extends AbstractController
 
         $htmlContent = $request->request->get('htmlContent');
         if (null !== $htmlContent) {
-            $data['html_content'] = InputHelper::html((string) $htmlContent);
+            $data['html_content'] = self::cleanHtmlContent((string) $htmlContent);
         }
 
         if (empty($data)) {
@@ -175,106 +275,56 @@ class ContentBlockController extends AbstractController
         }
     }
 
-    public function editPageAction(Request $request, int $objectId): Response
+    public function deleteAction(Request $request, int $objectId): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
         $table = MAUTIC_TABLE_PREFIX.'friendly_content_blocks';
-
-        if ($request->isMethod('POST')) {
-            $data = [];
-
-            $name = trim(InputHelper::string((string) $request->request->get('name', '')));
-            if ('' === $name) {
-                $error = 'Name is required.';
-            } elseif (mb_strlen($name) > 191) {
-                $error = 'Name must be 191 characters or fewer.';
-            } else {
-                $data['name'] = $name;
-            }
-
-            if (!isset($error)) {
-                $category         = strtolower(trim(InputHelper::string((string) $request->request->get('category', 'general'))));
-                $data['category'] = in_array($category, self::ALLOWED_CATEGORIES, true) ? $category : 'general';
-
-                $iconRaw      = (string) $request->request->get('icon', '');
-                $data['icon'] = '' !== $iconRaw ? mb_substr(strip_tags($iconRaw), 0, 20) : null;
-
-                $data['html_content'] = InputHelper::html((string) $request->request->get('htmlContent', ''));
-
-                try {
-                    $this->db->update($table, $data, ['id' => $objectId]);
-                } catch (\Throwable $e) {
-                    $this->logger->error('ContentBlock editPage failed: '.$e->getMessage());
-                    $error = 'An error occurred while saving.';
-                }
-            }
-
-            if (!isset($error)) {
-                $redirectUrl = $this->generateUrl('mautic_contentblock_index');
-                if ($request->isXmlHttpRequest()) {
-                    return new JsonResponse([
-                        'redirect'      => $redirectUrl,
-                        'flashes'       => '',
-                        'notifications' => '',
-                    ]);
-                }
-
-                return $this->redirect($redirectUrl);
-            }
-
-            // Re-render form with error
-            $row = $this->db->fetchAssociative(
-                "SELECT id, name, icon, category, html_content FROM `{$table}` WHERE id = ?",
-                [$objectId]
-            ) ?: [];
-        } else {
-            $row = $this->db->fetchAssociative(
-                "SELECT id, name, icon, category, html_content FROM `{$table}` WHERE id = ?",
-                [$objectId]
-            );
-
-            if (false === $row) {
-                throw $this->createNotFoundException('Content block not found.');
-            }
-        }
-
-        $route = $this->generateUrl('mautic_contentblock_edit_page', ['objectId' => $objectId]);
-        $html  = $this->renderView('@MauticContentBlock/ContentBlock/edit.html.twig', [
-            'item'         => $row,
-            'currentRoute' => $route,
-            'error'        => $error ?? null,
-        ]);
-
-        if ($request->isXmlHttpRequest()) {
-            return new JsonResponse([
-                'newContent'    => $html,
-                'route'         => $route,
-                'mauticContent' => 'contentBlockEdit',
-                'flashes'       => '',
-                'notifications' => '',
-            ]);
-        }
-
-        return new Response('<!DOCTYPE html><html><head><meta charset="UTF-8">
-            <script>window.location.replace("/s/dashboard");</script>
-        </head><body>Redirecting...</body></html>');
-    }
-
-    public function deleteAction(Request $request, int $objectId): JsonResponse
-    {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
-        $table = MAUTIC_TABLE_PREFIX.'friendly_content_blocks';
+        $page  = (int) $request->getSession()->get('mautic.contentBlock.page', 1);
 
         try {
             $this->db->delete($table, ['id' => $objectId]);
-
-            return new JsonResponse(['success' => true]);
         } catch (\Throwable $e) {
             $this->logger->error('ContentBlock delete failed: '.$e->getMessage());
-
-            return new JsonResponse(['error' => 'An error occurred.'], 500);
         }
+
+        return $this->postActionRedirect([
+            'returnUrl'       => $this->generateUrl('mautic_contentblock_index', ['page' => $page]),
+            'viewParameters'  => ['page' => $page],
+            'contentTemplate' => self::class.'::indexAction',
+            'passthroughVars' => [
+                'mauticContent' => 'contentBlock',
+            ],
+            'forwardController' => true,
+        ]);
+    }
+
+    public function dispatchAction(Request $request, string $objectAction, int $objectId = 0): Response
+    {
+        return match ($objectAction) {
+            'edit'   => $this->editPageAction($request, $objectId),
+            'delete' => $this->deleteAction($request, $objectId),
+            default  => throw $this->createNotFoundException("Unknown action: {$objectAction}"),
+        };
+    }
+
+    private function redirectToList(Request $request): Response
+    {
+        $page = (int) $request->getSession()->get('mautic.contentBlock.page', 1);
+
+        return $this->postActionRedirect([
+            'returnUrl'       => $this->generateUrl('mautic_contentblock_index', ['page' => $page]),
+            'viewParameters'  => ['page' => $page],
+            'contentTemplate' => self::class.'::indexAction',
+            'passthroughVars' => [
+                'mauticContent' => 'contentBlock',
+            ],
+            'forwardController' => true,
+        ]);
+    }
+
+    private static function cleanHtmlContent(string $html): string
+    {
+        return str_replace("\0", '', $html);
     }
 }

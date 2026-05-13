@@ -6,19 +6,6 @@
         var s = document.createElement('style');
         s.id = 'cb-styles';
         s.textContent = [
-            '.cb-dots-wrap{position:relative;display:inline-block}',
-            '.cb-dots-btn{background:none;border:none;padding:2px 7px;cursor:pointer;color:#bbb;font-size:18px;line-height:1;border-radius:4px}',
-            '.cb-dots-btn:hover{background:#eee;color:#555}',
-            '.cb-dropdown{display:none;position:absolute;left:0;top:100%;z-index:9999;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:160px;overflow:hidden}',
-            '.cb-dropdown.open{display:block}',
-            '.cb-dropdown a{display:flex;align-items:center;gap:8px;padding:9px 14px;font-size:13px;color:#444;text-decoration:none;cursor:pointer}',
-            '.cb-dropdown a:hover{background:#f5f5f5}',
-            '.cb-dropdown .cb-delete-btn{color:#d9534f}',
-            '.cb-dropdown a i{font-size:14px;width:16px;text-align:center}',
-            '.cb-toggle.btn-ghost{padding:0 2px;line-height:1;display:inline-flex;align-items:center;vertical-align:middle;border:none;background:none;}',
-            '.cb-emoji-opt{cursor:pointer;padding:3px 4px;border-radius:4px;display:inline-block;line-height:1;}',
-            '.cb-emoji-opt:hover{background:#e0e0e0}',
-            '.cb-emoji-opt.selected{background:#c8e0c8;outline:2px solid #7c9a6d;}',
             '.cb-name-text{color:#4e5d6c;font-weight:500;}',
             '.cb-name-text:hover{color:#00b19d;text-decoration:underline;}'
         ].join('');
@@ -92,7 +79,9 @@
     }
 
     // ── Icon grid builder ────────────────────────────────────────────
-    function buildIconGrid(gridEl, previewId, labelId, hiddenId, initial) {
+    // hiddenEl may be an element reference or a string id (legacy)
+    function buildIconGrid(gridEl, previewId, labelId, hiddenEl, initial) {
+        if (typeof hiddenEl === 'string') hiddenEl = document.getElementById(hiddenEl);
         gridEl.innerHTML = '';
         gridEl._sel = initial || '';
         var secStyle = 'font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;';
@@ -151,199 +140,32 @@
             });
             gridEl._sel = same ? '' : icon;
             if (!same) { opt.classList.add('selected'); opt.style.background = '#d0e8d0'; }
-            if (hiddenId) document.getElementById(hiddenId).value = gridEl._sel;
+            if (hiddenEl) hiddenEl.value = gridEl._sel;
             renderIconPreview(previewId, gridEl._sel);
             if (lbl) lbl.textContent = gridEl._sel ? 'Selected (click again to clear)' : 'None selected — click an icon below';
         });
     }
 
-    // ── Utility ──────────────────────────────────────────────────────
-    function getCsrf() { return typeof mauticAjaxCsrf !== 'undefined' ? mauticAjaxCsrf : ''; }
-    function post(url, body) {
-        return fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Content-Type':     'application/x-www-form-urlencoded',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-Token':     getCsrf(),
-            },
-            body: body ? body.toString() : '',
-        });
-    }
-    function closeDropdowns() { document.querySelectorAll('.cb-dropdown.open').forEach(function (d) { d.classList.remove('open'); }); }
-    function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
-    function escHtml(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-
-    // ── Mautic SPA entry point ───────────────────────────────────────
-    // Called by Mautic's SPA whenever a page with mauticContent='contentBlock' loads.
+    // ── List page entry point ────────────────────────────────────────
     Mautic.contentBlockOnLoad = function (container) {
-        // Mautic passes a CSS selector string (e.g. '#app-content'); resolve to DOM node.
         var el = (typeof container === 'string' ? document.querySelector(container) : null) || document;
 
-        // Render icons for rows already in the table
         el.querySelectorAll('.cb-icon-cell').forEach(function (s) { renderIconCell(s, s.dataset.emoji); });
-
-        // ── New Block ────────────────────────────────────────────────
-        var newBtn     = document.getElementById('cb-new-btn');
-        var newSaveBtn = document.getElementById('cb-new-save');
-
-        if (newBtn) {
-            newBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (newSaveBtn) { newSaveBtn.textContent = 'Save Block'; newSaveBtn.disabled = false; }
-                document.getElementById('cb-new-name').value = '';
-                document.getElementById('cb-new-category').value = '';
-                document.getElementById('cb-new-code').value = '';
-                document.getElementById('cb-new-err').style.display = 'none';
-                buildIconGrid(document.getElementById('cb-new-emoji-grid'), 'cb-new-icon-preview', 'cb-new-icon-label', null, '');
-                mQuery('#cb-new-modal').modal('show');
-                setTimeout(function () { document.getElementById('cb-new-name').focus(); }, 300);
-            });
-        }
-
-        if (newSaveBtn) {
-            newSaveBtn.addEventListener('click', function () {
-                var name  = document.getElementById('cb-new-name').value.trim();
-                var code  = document.getElementById('cb-new-code').value.trim();
-                var errEl = document.getElementById('cb-new-err');
-                if (!name) { errEl.textContent = 'Block name is required.'; errEl.style.display = 'block'; return; }
-                if (!code) { errEl.textContent = 'Code is required.'; errEl.style.display = 'block'; return; }
-                errEl.style.display = 'none';
-                var icon  = document.getElementById('cb-new-emoji-grid')._sel || '';
-                var cat   = document.getElementById('cb-new-category').value.trim() || 'general';
-                newSaveBtn.textContent = 'Saving…';
-                newSaveBtn.disabled = true;
-                var params = new URLSearchParams();
-                params.append('name', name);
-                params.append('icon', icon);
-                params.append('htmlContent', code);
-                params.append('category', cat);
-                post(mauticBasePath + '/s/content-blocks/save', params)
-                    .then(function (r) { return r.json(); })
-                    .then(function (data) {
-                        if (data.error) {
-                            newSaveBtn.textContent = 'Save Block';
-                            newSaveBtn.disabled = false;
-                            errEl.textContent = data.error;
-                            errEl.style.display = 'block';
-                            return;
-                        }
-                        mQuery('#cb-new-modal').modal('hide');
-                        window.location.reload();
-                    })
-                    .catch(function () {
-                        newSaveBtn.textContent = 'Save Block';
-                        newSaveBtn.disabled = false;
-                        errEl.textContent = 'Save failed — see console.';
-                        errEl.style.display = 'block';
-                    });
-            });
-        }
-
-        // ── Dropdowns (event delegation on container) ────────────────
-        el.addEventListener('click', function (e) { if (!e.target.closest('.cb-dots-wrap')) closeDropdowns(); });
-        el.addEventListener('click', function (e) {
-            var btn = e.target.closest('.cb-dots-btn');
-            if (!btn) return;
-            e.stopPropagation();
-            var dd  = btn.closest('.cb-dots-wrap').querySelector('.cb-dropdown');
-            var was = dd.classList.contains('open');
-            closeDropdowns();
-            if (!was) dd.classList.add('open');
-        });
-
-        // ── Toggle ───────────────────────────────────────────────────
-        el.addEventListener('click', function (e) {
-            var btn = e.target.closest('.cb-toggle');
-            if (!btn) return;
-            var p  = btn.dataset.published !== '1';
-            btn.dataset.published = p ? '1' : '0';
-            var ic = btn.querySelector('i');
-            if (ic) { ic.className = 'ri-toggle-' + (p ? 'fill' : 'line') + ' font-size-20'; ic.style.color = p ? '#00b19d' : '#bbb'; }
-            post(mauticBasePath + '/s/content-blocks/toggle/' + btn.dataset.id);
-        });
-
-        // ── Check all ────────────────────────────────────────────────
-        var ca = document.getElementById('cb-check-all');
-        if (ca) ca.addEventListener('change', function () { document.querySelectorAll('.cb-row-check').forEach(function (c) { c.checked = ca.checked; }); });
-
-        // ── Delete ───────────────────────────────────────────────────
-        el.addEventListener('click', function (e) {
-            var btn = e.target.closest('.cb-delete-btn');
-            if (!btn) return;
-            closeDropdowns();
-            if (!confirm('Delete "' + btn.dataset.name + '"? This cannot be undone.')) return;
-            var row = document.getElementById('cb-row-' + btn.dataset.id);
-            if (row) { row.style.opacity = '0.3'; row.style.pointerEvents = 'none'; }
-            post(mauticBasePath + '/s/content-blocks/delete/' + btn.dataset.id)
-                .then(function () { if (row) row.remove(); });
-        });
-
-        // ── Rename ───────────────────────────────────────────────────
-        el.addEventListener('click', function (e) {
-            var btn = e.target.closest('.cb-rename-btn');
-            if (!btn) return;
-            closeDropdowns();
-            document.getElementById('cb-rename-id').value       = btn.dataset.id;
-            document.getElementById('cb-rename-name').value     = btn.dataset.name;
-            document.getElementById('cb-rename-category').value = btn.dataset.category;
-            document.getElementById('cb-rename-icon').value     = btn.dataset.icon || '';
-            buildIconGrid(document.getElementById('cb-rename-emoji-grid'), 'cb-rename-icon-preview', 'cb-rename-icon-label', 'cb-rename-icon', btn.dataset.icon || '');
-            mQuery('#cb-rename-modal').modal('show');
-        });
-
-        var renameSaveBtn = document.getElementById('cb-rename-save');
-        if (renameSaveBtn) {
-            renameSaveBtn.addEventListener('click', function () {
-                var id   = document.getElementById('cb-rename-id').value;
-                var name = document.getElementById('cb-rename-name').value.trim();
-                var cat  = document.getElementById('cb-rename-category').value.trim() || 'general';
-                var icon = document.getElementById('cb-rename-icon').value.trim();
-                if (!name) { alert('Name is required.'); return; }
-                var row = document.getElementById('cb-row-' + id);
-                if (row) {
-                    row.querySelector('.cb-name-text').textContent = name;
-                    var rb = row.querySelector('.cb-rename-btn');
-                    if (rb) { rb.dataset.name = name; rb.dataset.category = cat; rb.dataset.icon = icon; }
-                    var ic = row.querySelector('.cb-icon-cell');
-                    if (ic) { ic.dataset.emoji = icon; renderIconCell(ic, icon); }
-                }
-                mQuery('#cb-rename-modal').modal('hide');
-                post(mauticBasePath + '/s/content-blocks/edit/' + id, new URLSearchParams({ name: name, category: cat, icon: icon }));
-            });
-        }
-
-        // ── Edit Code ────────────────────────────────────────────────
-        el.addEventListener('click', function (e) {
-            var btn = e.target.closest('.cb-code-btn');
-            if (!btn) return;
-            closeDropdowns();
-            document.getElementById('cb-code-id').value = btn.dataset.id;
-            var tmp = document.createElement('textarea');
-            tmp.innerHTML = btn.dataset.html;
-            document.getElementById('cb-code-html').value = tmp.value;
-            mQuery('#cb-code-modal').modal('show');
-        });
-
-        var codeSaveBtn = document.getElementById('cb-code-save');
-        if (codeSaveBtn) {
-            codeSaveBtn.addEventListener('click', function () {
-                var id = document.getElementById('cb-code-id').value;
-                mQuery('#cb-code-modal').modal('hide');
-                post(mauticBasePath + '/s/content-blocks/edit/' + id, new URLSearchParams({ htmlContent: document.getElementById('cb-code-html').value }));
-            });
-        }
     };
 
-    // ── Edit page entry point ────────────────────────────────────────
+    // ── New / Edit page entry point ──────────────────────────────────
     Mautic.contentBlockEditOnLoad = function () {
-        var grid     = document.getElementById('cb-edit-emoji-grid');
-        var iconInput = document.getElementById('cb-edit-icon');
+        var grid      = document.getElementById('cb-form-emoji-grid');
+        var iconInput = document.querySelector('[name="content_block[icon]"]');
         if (!grid || !iconInput) return;
 
-        buildIconGrid(grid, 'cb-edit-icon-preview', 'cb-edit-icon-label', 'cb-edit-icon', iconInput.value);
+        buildIconGrid(grid, 'cb-form-icon-preview', 'cb-form-icon-label', iconInput, iconInput.value);
+
+        // Mautic caches loadedContent per mauticContent key; reset after Mautic sets it
+        // so repeated SPA navigations to new/edit pages re-initialize the icon picker.
+        setTimeout(function () {
+            if (Mautic.loadedContent) delete Mautic.loadedContent.contentBlockEdit;
+        }, 0);
     };
 
 }());

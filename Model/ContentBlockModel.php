@@ -21,7 +21,7 @@ class ContentBlockModel extends FormModel
 
     public function getPermissionBase(): string
     {
-        return 'plugin:contentBlock:blocks';
+        return 'contentBlock:blocks';
     }
 
     public function getNameGetter(): string

@@ -1,0 +1,67 @@
+{% extends '@MauticCore/Default/content.html.twig' %}
+
+{% block mauticContent %}contentBlockEdit{% endblock %}
+
+{% block headerTitle %}
+    {% if item is not empty and item.id is defined and item.id %}
+        {% trans %}mautic.contentblock.edit{% endtrans %}: {{ item.name|e }}
+    {% else %}
+        {% trans %}mautic.contentblock.new{% endtrans %}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+{{ form_start(form, {'attr': {'data-toggle': 'ajax'}}) }}
+
+<div class="box-layout">
+
+    <div class="col-md-9 height-auto bdr-r">
+        <div class="pa-md">
+
+            <div class="row">
+                <div class="col-sm-8">
+                    {{ form_row(form.name) }}
+                </div>
+                <div class="col-sm-4">
+                    {{ form_row(form.category) }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label">
+                    {% trans %}mautic.contentblock.icon{% endtrans %}
+                    <small class="text-muted">({% trans %}mautic.core.optional{% endtrans %})</small>
+                </label>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span id="cb-form-icon-preview" style="min-width:32px;min-height:28px;display:inline-block;"></span>
+                    <span id="cb-form-icon-label" style="font-size:12px;color:#999;"></span>
+                </div>
+                <div id="cb-form-emoji-grid"
+                     style="background:#f8f8f8;border:1px solid #ddd;border-radius:6px;padding:10px;max-height:140px;overflow-y:auto;"></div>
+                {{ form_widget(form.icon) }}
+            </div>
+
+            {{ form_row(form.htmlContent) }}
+
+        </div>
+    </div>
+
+    <div class="col-md-3 height-auto">
+        <div class="pr-lg pl-lg pt-md pb-md">
+            <button type="submit" class="btn btn-primary btn-block btn-save">
+                <i class="ri-save-line"></i> {% trans %}mautic.core.form.save{% endtrans %}
+            </button>
+            <a href="{{ path('mautic_contentblock_index') }}"
+               class="btn btn-default btn-block mt-sm"
+               data-toggle="ajax">
+                {% trans %}mautic.core.form.cancel{% endtrans %}
+            </a>
+        </div>
+    </div>
+
+</div>
+
+{{ form_end(form) }}
+
+{% endblock %}

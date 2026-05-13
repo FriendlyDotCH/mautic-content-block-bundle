@@ -15,6 +15,11 @@ return [
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::indexAction',
                 'defaults'   => ['page' => 1],
             ],
+            'mautic_contentblock_new' => [
+                'path'       => '/content-blocks/new',
+                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::newAction',
+                'methods'    => ['GET', 'POST'],
+            ],
             'mautic_contentblock_delete' => [
                 'path'         => '/content-blocks/delete/{objectId}',
                 'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::deleteAction',
@@ -48,6 +53,14 @@ return [
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockApiController::class.'::saveAction',
                 'methods'    => ['POST'],
             ],
+            // Generic action dispatcher — used by list_actions.html.twig to build edit/delete URLs.
+            // Must come after all specific routes so literal path segments take precedence.
+            'mautic_contentblock_action' => [
+                'path'         => '/content-blocks/action/{objectAction}/{objectId}',
+                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::dispatchAction',
+                'defaults'     => ['objectId' => 0],
+                'requirements' => ['objectId' => '\d+'],
+            ],
         ],
     ],
 
@@ -68,7 +81,6 @@ return [
     'assets' => [
         'js' => [
             'plugins/MauticContentBlockBundle/Assets/js/contentblocks.grapesjs.js',
-            'plugins/MauticContentBlockBundle/Assets/js/contentblocks.admin.js',
         ],
     ],
 

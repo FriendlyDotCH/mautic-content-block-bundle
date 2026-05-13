@@ -1,229 +1,119 @@
-{% extends '@MauticCore/Default/content.html.twig' %}
-
-{% block headerTitle %}{% trans %}mautic.contentblock.menu.index{% endtrans %}{% endblock %}
+{% set isIndex = tmpl == 'index' ? true : false %}
+{% set tmpl = 'list' %}
+{% extends isIndex ? '@MauticCore/Default/content.html.twig' : '@MauticCore/Default/raw_output.html.twig' %}
 {% block mauticContent %}contentBlock{% endblock %}
+{% block headerTitle %}{% trans %}mautic.contentblock.menu.index{% endtrans %}{% endblock %}
 
 {% block actions %}
-    <a class="btn btn-primary btn-lg" id="cb-new-btn" href="javascript:void(0)">
+    <a class="btn btn-primary btn-lg"
+       href="{{ path('mautic_contentblock_new') }}"
+       data-toggle="ajax">
         <i class="ri-add-line"></i> {% trans %}mautic.core.form.new{% endtrans %}
     </a>
 {% endblock %}
 
 {% block content %}
-
-{# ── New Block Modal ─────────────────────────────────────────── #}
-<div id="cb-new-modal" class="modal fade" tabindex="-1">
-    <div class="modal-dialog modal-lg"><div class="modal-content">
-        <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal">&times;</button>
-            <h4 class="modal-title">{% trans %}mautic.contentblock.new{% endtrans %}</h4>
+    {% if isIndex %}
+    <div id="page-list-wrapper" class="{% if items|length > 0 or searchValue is not empty %}panel {% endif %}panel-default">
+        {{- include('@MauticCore/Helper/list_toolbar.html.twig', {
+            'searchValue': searchValue,
+            'action':      currentRoute,
+        }) -}}
+        <div class="page-list">
+            {{ block('listResults') }}
         </div>
-        <div class="modal-body">
-            <div class="row">
-                <div class="col-sm-8">
-                    <div class="form-group">
-                        <label>{% trans %}mautic.core.name{% endtrans %} <span class="text-danger">*</span></label>
-                        <input type="text" id="cb-new-name" class="form-control" placeholder="e.g. CH Footer, DE Hero…">
-                    </div>
-                </div>
-                <div class="col-sm-4">
-                    <div class="form-group">
-                        <label>{% trans %}mautic.core.category{% endtrans %}</label>
-                        <input type="text" id="cb-new-category" class="form-control" placeholder="general">
-                    </div>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>{% trans %}mautic.contentblock.icon{% endtrans %} <small class="text-muted">({% trans %}mautic.core.optional{% endtrans %})</small></label>
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span id="cb-new-icon-preview" style="min-width:32px;min-height:28px;display:inline-block;"></span>
-                    <span id="cb-new-icon-label" style="font-size:12px;color:#999;">None selected — click an icon below</span>
-                </div>
-                <div id="cb-new-emoji-grid" style="background:#f8f8f8;border:1px solid #ddd;border-radius:6px;padding:10px;max-height:120px;overflow-y:auto;line-height:1.6;"></div>
-            </div>
-            <div class="form-group">
-                <label>{% trans %}mautic.contentblock.html_content{% endtrans %} <span class="text-danger">*</span></label>
-                <textarea id="cb-new-code" class="form-control" rows="14"
-                          placeholder="Paste your mj-section or mj-hero code here…"
-                          style="font-family:'Courier New',monospace;font-size:12px;line-height:1.5;resize:vertical;"></textarea>
-            </div>
-            <div id="cb-new-err" class="text-danger" style="display:none;margin-top:4px;"></div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-dismiss="modal">{% trans %}mautic.core.form.cancel{% endtrans %}</button>
-            <button type="button" class="btn btn-primary" id="cb-new-save">{% trans %}mautic.core.form.save{% endtrans %}</button>
-        </div>
-    </div></div>
-</div>
-
-{# ── Rename Modal ───────────────────────────────────────────── #}
-<div id="cb-rename-modal" class="modal fade" tabindex="-1">
-    <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal">&times;</button>
-            <h4 class="modal-title">{% trans %}mautic.contentblock.rename{% endtrans %}</h4>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label>{% trans %}mautic.core.name{% endtrans %}</label>
-                <input type="text" id="cb-rename-name" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>{% trans %}mautic.core.category{% endtrans %}</label>
-                <input type="text" id="cb-rename-category" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>{% trans %}mautic.contentblock.icon{% endtrans %} <small class="text-muted">({% trans %}mautic.core.optional{% endtrans %})</small></label>
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span id="cb-rename-icon-preview" style="min-width:32px;min-height:28px;display:inline-block;"></span>
-                    <span id="cb-rename-icon-label" style="font-size:12px;color:#999;"></span>
-                </div>
-                <div id="cb-rename-emoji-grid" style="background:#f8f8f8;border:1px solid #ddd;border-radius:6px;padding:10px;max-height:120px;overflow-y:auto;line-height:1.6;"></div>
-                <input type="hidden" id="cb-rename-icon">
-            </div>
-            <input type="hidden" id="cb-rename-id">
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-dismiss="modal">{% trans %}mautic.core.form.cancel{% endtrans %}</button>
-            <button type="button" class="btn btn-primary" id="cb-rename-save">{% trans %}mautic.core.form.save{% endtrans %}</button>
-        </div>
-    </div></div>
-</div>
-
-{# ── Code Modal ─────────────────────────────────────────────── #}
-<div id="cb-code-modal" class="modal fade" tabindex="-1">
-    <div class="modal-dialog modal-lg"><div class="modal-content">
-        <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal">&times;</button>
-            <h4 class="modal-title">{% trans %}mautic.contentblock.edit_code{% endtrans %}</h4>
-        </div>
-        <div class="modal-body">
-            <textarea id="cb-code-html" class="form-control" rows="20"
-                      style="font-family:'Courier New',monospace;font-size:12px;line-height:1.5;"></textarea>
-            <input type="hidden" id="cb-code-id">
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-dismiss="modal">{% trans %}mautic.core.form.close{% endtrans %}</button>
-            <button type="button" class="btn btn-primary" id="cb-code-save">{% trans %}mautic.core.form.save{% endtrans %}</button>
-        </div>
-    </div></div>
-</div>
-
-<div id="page-list-wrapper" class="{% if items|length > 0 or searchValue is not empty %}panel {% endif %}panel-default">
-
-    {{- include('@MauticCore/Helper/list_toolbar.html.twig', {
-        'searchValue': searchValue,
-        'action':      currentRoute,
-    }) -}}
-
-    <div class="page-list">
-        {% if items|length %}
-            <div class="table-responsive">
-                <table class="table table-hover" id="cb-table">
-                    <thead>
-                        <tr>
-                            {{- include('@MauticCore/Helper/tableheader.html.twig', {
-                                'checkall': 'true',
-                                'target':   '#cb-table',
-                            }) -}}
-                            <th class="col-actions"></th>
-                            {{- include('@MauticCore/Helper/tableheader.html.twig', {
-                                'sessionVar': 'contentBlock',
-                                'orderBy':    'name',
-                                'text':       'mautic.core.name',
-                                'default':    true,
-                            }) -}}
-                            {{- include('@MauticCore/Helper/tableheader.html.twig', {
-                                'sessionVar': 'contentBlock',
-                                'orderBy':    'category',
-                                'text':       'mautic.core.category',
-                                'class':      'col-sm-2',
-                            }) -}}
-                            {{- include('@MauticCore/Helper/tableheader.html.twig', {
-                                'sessionVar': 'contentBlock',
-                                'orderBy':    'date_added',
-                                'text':       'mautic.core.date.added',
-                                'class':      'col-sm-2',
-                            }) -}}
-                            {{- include('@MauticCore/Helper/tableheader.html.twig', {
-                                'sessionVar': 'contentBlock',
-                                'orderBy':    'id',
-                                'text':       'mautic.core.id',
-                                'class':      'col-sm-1',
-                            }) -}}
-                        </tr>
-                    </thead>
-                    <tbody id="cb-tbody">
-                        {% for item in items %}
-                            {% set pub = item.is_published %}
-                            <tr id="cb-row-{{ item.id }}" data-id="{{ item.id }}">
-                                <td class="col-has-checkbox">
-                                    <input type="checkbox" class="cb-row-check" value="{{ item.id }}" />
-                                </td>
-                                <td>
-                                    <div class="cb-dots-wrap">
-                                        <button class="cb-dots-btn" title="Actions">&#8942;</button>
-                                        <div class="cb-dropdown">
-                                            <a href="{{ path('mautic_contentblock_edit_page', {objectId: item.id}) }}"
-                                               data-toggle="ajax">
-                                                <i class="ri-edit-line"></i> {% trans %}mautic.contentblock.edit{% endtrans %}
-                                            </a>
-                                            <a class="cb-code-btn"
-                                               data-id="{{ item.id }}"
-                                               data-html="{{ item.html_content|e('html_attr') }}">
-                                                <i class="ri-code-line"></i> {% trans %}mautic.contentblock.edit_code{% endtrans %}
-                                            </a>
-                                            <a class="cb-delete-btn"
-                                               data-id="{{ item.id }}"
-                                               data-name="{{ item.name|e('html_attr') }}">
-                                                <i class="ri-delete-bin-line"></i> {% trans %}mautic.core.form.delete{% endtrans %}
-                                            </a>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <a class="cb-toggle btn btn-ghost btn-xs" href="javascript:void(0)"
-                                       data-id="{{ item.id }}" data-published="{{ pub ? '1' : '0' }}">
-                                        <i class="ri-toggle-{{ pub ? 'fill' : 'line' }} font-size-20"
-                                           style="color:{{ pub ? '#00b19d' : '#bbb' }};"></i>
-                                    </a>
-                                    <span class="cb-icon-cell"
-                                          data-emoji="{{ (item.icon ?? '')|e('html_attr') }}"
-                                          style="display:inline-block;width:20px;height:20px;vertical-align:middle;margin:0 4px 0 2px;"></span>
-                                    <a class="cb-name-text"
-                                       href="{{ path('mautic_contentblock_edit_page', {objectId: item.id}) }}"
-                                       data-toggle="ajax">{{ item.name|e }}</a>
-                                </td>
-                                <td>{{ (item.category ?? 'general')|e }}</td>
-                                <td class="text-muted">{{ item.date_added ?? '' }}</td>
-                                <td class="text-muted" style="text-align:right;">{{ item.id }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="panel-footer">
-                {{- include('@MauticCore/Helper/pagination.html.twig', {
-                    'totalItems': totalItems,
-                    'page':       page,
-                    'limit':      limit,
-                    'menuLinkId': 'mautic_contentblock_index',
-                    'baseUrl':    currentRoute,
-                    'sessionVar': 'contentBlock',
-                }) -}}
-            </div>
-
-        {% else %}
-            {% if searchValue is not empty %}
-                {{- include('@MauticCore/Helper/noresults.html.twig') -}}
-            {% else %}
-                <div class="text-center pa-md text-muted">
-                    {% trans %}mautic.contentblock.no_items{% endtrans %}
-                </div>
-            {% endif %}
-        {% endif %}
     </div>
-</div>
+    {% else %}
+        {{ block('listResults') }}
+    {% endif %}
+{% endblock %}
 
+{% block listResults %}
+{% if items|length > 0 %}
+    <div class="table-responsive">
+        <table class="table table-hover cb-list">
+            <thead>
+                <tr>
+                    {{- include('@MauticCore/Helper/tableheader.html.twig', {
+                        'checkall':        'true',
+                        'routeBase':       'contentblock',
+                        'templateButtons': {'delete': true},
+                    }) -}}
+                    {{- include('@MauticCore/Helper/tableheader.html.twig', {
+                        'sessionVar': 'contentBlock',
+                        'orderBy':    'name',
+                        'text':       'mautic.core.name',
+                        'class':      'col-cb-name',
+                        'default':    true,
+                    }) -}}
+                    {{- include('@MauticCore/Helper/tableheader.html.twig', {
+                        'sessionVar': 'contentBlock',
+                        'orderBy':    'category',
+                        'text':       'mautic.core.category',
+                        'class':      'visible-md visible-lg col-cb-category',
+                    }) -}}
+                    {{- include('@MauticCore/Helper/tableheader.html.twig', {
+                        'sessionVar': 'contentBlock',
+                        'orderBy':    'date_added',
+                        'text':       'mautic.core.date.added',
+                        'class':      'visible-md visible-lg col-cb-date',
+                    }) -}}
+                    {{- include('@MauticCore/Helper/tableheader.html.twig', {
+                        'sessionVar': 'contentBlock',
+                        'orderBy':    'id',
+                        'text':       'mautic.core.id',
+                        'class':      'visible-md visible-lg col-cb-id',
+                    }) -}}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    {% set pub = item.is_published %}
+                    <tr id="cb-row-{{ item.id }}" data-id="{{ item.id }}">
+                        <td>
+                            {{- include('@MauticCore/Helper/list_actions.html.twig', {
+                                'item':            item,
+                                'templateButtons': {'edit': true, 'delete': true},
+                                'routeBase':       'contentblock',
+                                'translationBase': 'mautic.contentblock',
+                            }) -}}
+                        </td>
+                        <td>
+                            {{- include('@MauticCore/Helper/publishstatus_icon.html.twig', {
+                                'item':  item|merge({'publishStatus': pub ? 'published' : 'unpublished'}),
+                                'model': 'content_block',
+                            }) -}}
+                            <span class="cb-icon-cell"
+                                  data-emoji="{{ (item.icon ?? '')|e('html_attr') }}"
+                                  style="display:inline-block;width:20px;height:20px;vertical-align:middle;margin:0 4px 0 2px;"></span>
+                            <a href="{{ path('mautic_contentblock_action', {objectAction: 'edit', objectId: item.id}) }}"
+                               data-toggle="ajax">{{ item.name|e }}</a>
+                        </td>
+                        <td class="visible-md visible-lg">{{ (item.category ?? 'general')|e }}</td>
+                        <td class="visible-md visible-lg text-muted">{{ item.date_added ?? '' }}</td>
+                        <td class="visible-md visible-lg text-muted">{{ item.id }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="panel-footer">
+        {{- include('@MauticCore/Helper/pagination.html.twig', {
+            'totalItems': totalItems,
+            'page':       page,
+            'limit':      limit,
+            'menuLinkId': 'mautic_contentblock_index',
+            'baseUrl':    currentRoute,
+            'sessionVar': 'contentBlock',
+        }) -}}
+    </div>
+{% else %}
+    {% if searchValue is not empty %}
+        {{- include('@MauticCore/Helper/noresults.html.twig') -}}
+    {% else %}
+        <div class="text-center pa-md text-muted">
+            {% trans %}mautic.contentblock.no_items{% endtrans %}
+        </div>
+    {% endif %}
+{% endif %}
 {% endblock %}
