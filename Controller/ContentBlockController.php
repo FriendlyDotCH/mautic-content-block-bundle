@@ -65,6 +65,16 @@ class ContentBlockController extends AbstractStandardFormController
         return parent::batchDeleteStandard($request);
     }
 
+    protected function getViewArguments(array $args, $action): array
+    {
+        $args['passthroughVars']['mauticContent'] = match ($action) {
+            'index' => 'contentBlock',
+            default => 'contentBlockEdit',
+        };
+
+        return $args;
+    }
+
     // public function toggleAction(Request $request, int $objectId): JsonResponse
     // {
     //     $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
