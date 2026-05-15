@@ -30,10 +30,10 @@ class AssetsSubscriber implements EventSubscriberInterface
             return;
         }
 
-        if (!str_starts_with($request->getPathInfo(), '/s/content-blocks')) {
-            return;
+        if (str_starts_with($request->getPathInfo(), '/s/content-blocks')) {
+            $assetsEvent->addScript('plugins/MauticContentBlockBundle/Assets/js/lazy/contentblocks.admin.js');
+        } elseif (str_starts_with($request->getPathInfo(), '/s/emails')) {
+            $assetsEvent->addScript('plugins/MauticContentBlockBundle/Assets/js/lazy/contentblocks.grapesjs.js');
         }
-
-        $assetsEvent->addScript('plugins/MauticContentBlockBundle/Assets/js/contentblocks.admin.js');
     }
 }

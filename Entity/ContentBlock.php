@@ -17,7 +17,7 @@ class ContentBlock extends FormEntity
 
     private string $name = '';
 
-    private ?string $category = null;
+    private ?string $cbCategory = null;
 
     private string $htmlContent = '';
 
@@ -36,8 +36,8 @@ class ContentBlock extends FormEntity
 
         $builder->addNamedField('name', Types::STRING, 'name');
 
-        $builder->createField('category', Types::STRING)
-            ->columnName('category')
+        $builder->createField('cbCategory', Types::STRING)
+            ->columnName('cb_category')
             ->length(100)
             ->nullable()
             ->build();
@@ -76,15 +76,15 @@ class ContentBlock extends FormEntity
         return $this;
     }
 
-    public function getCategory(): ?string
+    public function getCbCategory(): ?string
     {
-        return $this->category;
+        return $this->cbCategory;
     }
 
-    public function setCategory(?string $category): self
+    public function setCbCategory(?string $cbCategory): self
     {
-        $this->isChanged('category', $category);
-        $this->category = $category;
+        $this->isChanged('cbCategory', $cbCategory);
+        $this->cbCategory = $cbCategory;
 
         return $this;
     }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MauticPlugin\MauticContentBlockBundle\Form\Type;
 
+use Mautic\CoreBundle\Form\Type\FormButtonsType;
+use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlock;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
@@ -29,7 +31,7 @@ class ContentBlockType extends AbstractType
                     new Length(['max' => 191]),
                 ],
             ])
-            ->add('category', ChoiceType::class, [
+            ->add('cbCategory', ChoiceType::class, [
                 'label'      => 'mautic.core.category',
                 'label_attr' => ['class' => 'control-label'],
                 'attr'       => ['class' => 'form-control'],
@@ -55,7 +57,8 @@ class ContentBlockType extends AbstractType
                     'style' => "font-family:'Courier New',monospace;font-size:12px;line-height:1.5;resize:vertical;",
                 ],
                 'required' => false,
-            ]);
+            ])
+            ->add('buttons', FormButtonsType::class);
 
         if (!empty($options['action'])) {
             $builder->setAction($options['action']);
@@ -64,7 +67,7 @@ class ContentBlockType extends AbstractType
 
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefaults(['data_class' => null]);
+        $resolver->setDefaults(['data_class' => ContentBlock::class]);
     }
 
     public function getBlockPrefix(): string

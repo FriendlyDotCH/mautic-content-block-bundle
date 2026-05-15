@@ -5,14 +5,29 @@ declare(strict_types=1);
 namespace MauticPlugin\MauticContentBlockBundle\Model;
 
 use Mautic\CoreBundle\Model\FormModel;
+use MauticPlugin\MauticContentBlockBundle\ContentBlockEvents;
 use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlock;
 use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlockRepository;
+use MauticPlugin\MauticContentBlockBundle\Form\Type\ContentBlockType;
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Contracts\EventDispatcher\Event;
 
 /**
  * @extends FormModel<ContentBlock>
  */
 class ContentBlockModel extends FormModel
 {
+    public function getEntity($id = null): ?ContentBlock
+    {
+        if (null === $id) {
+            return new ContentBlock();
+        }
+
+        return $this->getRepository()->find($id);
+    }
+
     public function getRepository(): ContentBlockRepository
     {
         /** @var ContentBlockRepository */
@@ -24,30 +39,48 @@ class ContentBlockModel extends FormModel
         return 'contentBlock:blocks';
     }
 
-    public function getNameGetter(): string
+    /**
+     * @param ContentBlock $entity
+     * @param array<mixed> $options
+     */
+    public function createForm($entity, FormFactoryInterface $formFactory, $action = null, $options = []): FormInterface
     {
-        return 'getName';
-    }
-
-    public function getEntity($id = null): ?ContentBlock
-    {
-        if (null === $id) {
-            return new ContentBlock();
+        if (!$entity instanceof ContentBlock) {
+            throw new MethodNotAllowedHttpException(['ContentBlock']);
         }
 
-        return $this->getRepository()->find($id);
+        if (!empty($action)) {
+            $options['action'] = $action;
+        }
+
+        return $formFactory->create(ContentBlockType::class, $entity, $options);
     }
 
-    /**
-     * @return array<int, array{id: int, name: string, category: string, htmlContent: string, thumbnail: string|null}>
-     */
-    public function getAllForApi(): array
+    protected function dispatchEvent($action, &$entity, $isNew = false, ?Event $event = null): ?Event
     {
-        return $this->getRepository()->findAllForApi();
-    }
+        if (!$entity instanceof ContentBlock) {
+            throw new MethodNotAllowedHttpException(['ContentBlock']);
+        }
 
-    public function saveEntity($entity, $unlock = true): void
-    {
-        parent::saveEntity($entity, $unlock);
+        $name = match ($action) {
+            'pre_save'    => ContentBlockEvents::CONTENT_BLOCK_PRE_SAVE,
+            'post_save'   => ContentBlockEvents::CONTENT_BLOCK_POST_SAVE,
+            'pre_delete'  => ContentBlockEvents::CONTENT_BLOCK_PRE_DELETE,
+            'post_delete' => ContentBlockEvents::CONTENT_BLOCK_POST_DELETE,
+            default       => null,
+        };
+
+        if (null === $name || !$this->dispatcher->hasListeners($name)) {
+            return null;
+        }
+
+        if (empty($event)) {
+            $event = new ContentBlockEvent($entity, $isNew);
+            $event->setEntityManager($this->em);
+        }
+
+        $this->dispatcher->dispatch($event, $name);
+
+        return $event;
     }
 }

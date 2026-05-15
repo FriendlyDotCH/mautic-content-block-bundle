@@ -10,7 +10,7 @@ use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
-class MauticContentBlockExtension extends Extension implements PrependExtensionInterface
+class MauticContentBlockExtension extends Extension /* implements PrependExtensionInterface */
 {
     public function load(array $configs, ContainerBuilder $container): void
     {
@@ -18,12 +18,12 @@ class MauticContentBlockExtension extends Extension implements PrependExtensionI
         $loader->load('services.php');
     }
 
-    public function prepend(ContainerBuilder $container): void
+    /*public function prepend(ContainerBuilder $container): void
     {
         $container->prependExtensionConfig('twig', [
             'paths' => [
                 \dirname(__DIR__).'/Views' => 'MauticContentBlock',
             ],
         ]);
-    }
+    }*/
 }

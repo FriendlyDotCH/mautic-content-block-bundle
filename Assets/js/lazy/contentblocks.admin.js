@@ -153,6 +153,15 @@
         el.querySelectorAll('.cb-icon-cell').forEach(function (s) { renderIconCell(s, s.dataset.emoji); });
     };
 
+    // ── AJAX dispatcher (called by Mautic SPA on every content-blocks page load) ─
+    Mautic.contentblockcontentblockOnLoad = function (container) {
+        if (document.getElementById('cb-form-emoji-grid')) {
+            Mautic.contentBlockEditOnLoad();
+        } else {
+            Mautic.contentBlockOnLoad(container);
+        }
+    };
+
     // ── New / Edit page entry point ──────────────────────────────────
     Mautic.contentBlockEditOnLoad = function () {
         var grid      = document.getElementById('cb-form-emoji-grid');

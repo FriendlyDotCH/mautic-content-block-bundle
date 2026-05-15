@@ -6,7 +6,7 @@
 
 {% block actions %}
     <a class="btn btn-primary btn-lg"
-       href="{{ path('mautic_contentblock_new') }}"
+       href="{{ path('mautic_contentblock_action', {objectAction: 'new'}) }}"
        data-toggle="ajax">
         <i class="ri-add-line"></i> {% trans %}mautic.core.form.new{% endtrans %}
     </a>
@@ -48,7 +48,7 @@
                     }) -}}
                     {{- include('@MauticCore/Helper/tableheader.html.twig', {
                         'sessionVar': 'contentBlock',
-                        'orderBy':    'category',
+                        'orderBy':    'cb.cbCategory',
                         'text':       'mautic.core.category',
                         'class':      'visible-md visible-lg col-cb-category',
                     }) -}}
@@ -68,7 +68,6 @@
             </thead>
             <tbody>
                 {% for item in items %}
-                    {% set pub = item.is_published %}
                     <tr id="cb-row-{{ item.id }}" data-id="{{ item.id }}">
                         <td>
                             {{- include('@MauticCore/Helper/list_actions.html.twig', {
@@ -80,8 +79,9 @@
                         </td>
                         <td>
                             {{- include('@MauticCore/Helper/publishstatus_icon.html.twig', {
-                                'item':  item|merge({'publishStatus': pub ? 'published' : 'unpublished'}),
-                                'model': 'content_block',
+                                'item':   item,
+                                'model':  'content_block',
+                                'status': item.published ? 'published' : 'unpublished',
                             }) -}}
                             <span class="cb-icon-cell"
                                   data-emoji="{{ (item.icon ?? '')|e('html_attr') }}"
@@ -89,8 +89,8 @@
                             <a href="{{ path('mautic_contentblock_action', {objectAction: 'edit', objectId: item.id}) }}"
                                data-toggle="ajax">{{ item.name|e }}</a>
                         </td>
-                        <td class="visible-md visible-lg">{{ (item.category ?? 'general')|e }}</td>
-                        <td class="visible-md visible-lg text-muted">{{ item.date_added ?? '' }}</td>
+                        <td class="visible-md visible-lg">{{ (item.cbCategory ?? 'general')|e }}</td>
+                        <td class="visible-md visible-lg text-muted">{{ item.dateAdded ? item.dateAdded|date('Y-m-d H:i:s') : '' }}</td>
                         <td class="visible-md visible-lg text-muted">{{ item.id }}</td>
                     </tr>
                 {% endfor %}

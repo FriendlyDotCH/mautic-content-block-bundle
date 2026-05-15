@@ -13,13 +13,38 @@ return function (ContainerConfigurator $configurator): void {
         ->autoconfigure()
         ->public();
 
+    $excludes = [
+        'Config',
+        'Crate',
+        'DataObject',
+        'DependencyInjection',
+        'DTO',
+        'Entity',
+        'Event',
+        'Exception',
+        'Migration',
+        'Migrations',
+        'Security',
+        'Test',
+        'Tests',
+        'Views',
+
+        '.devtools',
+        '.env',
+        'bin',
+        'migrations_old',
+    ];
+
     $services->load('MauticPlugin\\MauticContentBlockBundle\\', '../')
-        ->exclude('../{Config,DependencyInjection,Entity,Migrations,migrations_old,Resources,Security,Translations,Views}');
+        ->exclude(
+            '../{'.implode(',', $excludes).'}'
+        );
+    $services->load('MauticPlugin\\MauticContentBlockBundle\\Entity\\', '../Entity/*Repository.php');
+
+    // $services->load('MauticPlugin\\MauticContentBlockBundle\\', '../')
+    //     ->exclude('../{Config,DependencyInjection,Entity,Migrations,migrations_old,Resources,Security,Translations,Views}');
 
     // Explicit DBAL connection since Symfony can't disambiguate Connection by type alone.
-    $services->set(MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class)
-        ->arg('$db', service('doctrine.dbal.default_connection'));
-
     $services->set(MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockApiController::class)
         ->arg('$db', service('doctrine.dbal.default_connection'));
 

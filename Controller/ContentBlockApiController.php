@@ -34,14 +34,14 @@ class ContentBlockApiController extends AbstractController
 
         try {
             $rows = $this->db->fetchAllAssociative(
-                "SELECT id, name, icon, category, html_content, thumbnail FROM `{$table}` WHERE is_published = 1 ORDER BY name ASC"
+                "SELECT id, name, icon, cb_category, html_content, thumbnail FROM `{$table}` WHERE is_published = 1 ORDER BY name ASC"
             );
 
             $blocks = array_map(fn ($r) => [
                 'id'          => (int) $r['id'],
                 'name'        => $r['name'],
                 'icon'        => $r['icon'] ?? null,
-                'category'    => $r['category'] ?? 'general',
+                'category'    => $r['cb_category'] ?? 'general',
                 'htmlContent' => $r['html_content'],
                 'thumbnail'   => $r['thumbnail'] ?? null,
             ], $rows);
@@ -91,7 +91,7 @@ class ContentBlockApiController extends AbstractController
                 'name'         => $name,
                 'icon'         => $icon,
                 'html_content' => $htmlContent,
-                'category'     => $category,
+                'cb_category'  => $category,
                 'is_published' => 1,
                 'date_added'   => (new \DateTime())->format('Y-m-d H:i:s'),
             ]);

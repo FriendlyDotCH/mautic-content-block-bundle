@@ -15,34 +15,10 @@ return [
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::indexAction',
                 'defaults'   => ['page' => 1],
             ],
-            'mautic_contentblock_new' => [
-                'path'       => '/content-blocks/new',
-                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::newAction',
-                'methods'    => ['GET', 'POST'],
-            ],
-            'mautic_contentblock_delete' => [
-                'path'         => '/content-blocks/delete/{objectId}',
-                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::deleteAction',
-                'requirements' => ['objectId' => '\d+'],
-                'methods'      => ['POST'],
-            ],
-            'mautic_contentblock_toggle' => [
-                'path'         => '/content-blocks/toggle/{objectId}',
-                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::toggleAction',
-                'requirements' => ['objectId' => '\d+'],
-                'methods'      => ['POST'],
-            ],
-            'mautic_contentblock_edit_inline' => [
-                'path'         => '/content-blocks/edit/{objectId}',
-                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::editAction',
-                'requirements' => ['objectId' => '\d+'],
-                'methods'      => ['POST'],
-            ],
-            'mautic_contentblock_edit_page' => [
-                'path'         => '/content-blocks/{objectId}/edit',
-                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::editPageAction',
-                'requirements' => ['objectId' => '\d+'],
-                'methods'      => ['GET', 'POST'],
+            'mautic_contentblock_action' => [
+                'path'       => '/content-blocks/{objectAction}/{objectId}',
+                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::executeAction',
+                'defaults'   => ['objectId' => 0],
             ],
             'mautic_contentblock_list_ajax' => [
                 'path'       => '/content-blocks/list',
@@ -53,14 +29,6 @@ return [
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockApiController::class.'::saveAction',
                 'methods'    => ['POST'],
             ],
-            // Generic action dispatcher — used by list_actions.html.twig to build edit/delete URLs.
-            // Must come after all specific routes so literal path segments take precedence.
-            'mautic_contentblock_action' => [
-                'path'         => '/content-blocks/action/{objectAction}/{objectId}',
-                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::dispatchAction',
-                'defaults'     => ['objectId' => 0],
-                'requirements' => ['objectId' => '\d+'],
-            ],
         ],
     ],
 
@@ -68,7 +36,7 @@ return [
         'main' => [
             // Use a plain readable string as key — Mautic will try to translate it,
             // fall back to the key itself, which is already human-readable.
-            'Content Blocks' => [
+            'mautic.contentblock.menu.index' => [
                 'route'    => 'mautic_contentblock_index',
                 'parent'   => 'mautic.core.components',
                 'priority' => 60,
@@ -77,23 +45,6 @@ return [
     ],
 
     'services' => [],
-
-    'assets' => [
-        'js' => [
-            'plugins/MauticContentBlockBundle/Assets/js/contentblocks.grapesjs.js',
-        ],
-    ],
-
-    'doctrine' => [
-        'mappings' => [
-            'MauticContentBlockBundle' => [
-                'is_bundle' => false,
-                'type'      => 'staticphp',
-                'dir'       => '%kernel.project_dir%/plugins/MauticContentBlockBundle/Entity',
-                'prefix'    => 'MauticPlugin\\MauticContentBlockBundle\\Entity',
-            ],
-        ],
-    ],
 
     'parameters' => [],
 ];

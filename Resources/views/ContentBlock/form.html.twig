@@ -3,8 +3,8 @@
 {% block mauticContent %}contentBlockEdit{% endblock %}
 
 {% block headerTitle %}
-    {% if item is not empty and item.id is defined and item.id %}
-        {% trans %}mautic.contentblock.edit{% endtrans %}: {{ item.name|e }}
+    {% if entity is not null and entity.id %}
+        {% trans %}mautic.contentblock.edit{% endtrans %}: {{ entity.name|e }}
     {% else %}
         {% trans %}mautic.contentblock.new{% endtrans %}
     {% endif %}
@@ -16,15 +16,19 @@
 
 <div class="box-layout">
 
-    <div class="col-md-9 height-auto bdr-r">
+    <div class="col-md-12 height-auto">
         <div class="pa-md">
+
+            <div class="text-right mb-md">
+                {{ form_widget(form.buttons) }}
+            </div>
 
             <div class="row">
                 <div class="col-sm-8">
                     {{ form_row(form.name) }}
                 </div>
                 <div class="col-sm-4">
-                    {{ form_row(form.category) }}
+                    {{ form_row(form.cbCategory) }}
                 </div>
             </div>
 
@@ -44,19 +48,6 @@
 
             {{ form_row(form.htmlContent) }}
 
-        </div>
-    </div>
-
-    <div class="col-md-3 height-auto">
-        <div class="pr-lg pl-lg pt-md pb-md">
-            <button type="submit" class="btn btn-primary btn-block btn-save">
-                <i class="ri-save-line"></i> {% trans %}mautic.core.form.save{% endtrans %}
-            </button>
-            <a href="{{ path('mautic_contentblock_index') }}"
-               class="btn btn-default btn-block mt-sm"
-               data-toggle="ajax">
-                {% trans %}mautic.core.form.cancel{% endtrans %}
-            </a>
         </div>
     </div>
 
