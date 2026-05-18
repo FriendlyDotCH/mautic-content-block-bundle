@@ -10,6 +10,16 @@ return [
 
     'routes' => [
         'main' => [
+            'mautic_contentblock_editor_list' => [
+                'path'       => '/content-blocks/editor',
+                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockGrapeController::class.'::getBlocksAction',
+                'methods'    => ['GET'],
+            ],
+            // 'mautic_contentblock_editor_save' => [
+            //     'path'       => '/content-blocks/editor',
+            //     'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockGrapeController::class.'::postBlockAction',
+            //     'methods'    => ['POST'],
+            // ],
             'mautic_contentblock_index' => [
                 'path'       => '/content-blocks/{page}',
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::indexAction',
@@ -20,22 +30,11 @@ return [
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::executeAction',
                 'defaults'   => ['objectId' => 0],
             ],
-            'mautic_contentblock_list_ajax' => [
-                'path'       => '/content-blocks/list',
-                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockApiController::class.'::listAction',
-            ],
-            'mautic_contentblock_save' => [
-                'path'       => '/content-blocks/save',
-                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockApiController::class.'::saveAction',
-                'methods'    => ['POST'],
-            ],
         ],
     ],
 
     'menu' => [
         'main' => [
-            // Use a plain readable string as key — Mautic will try to translate it,
-            // fall back to the key itself, which is already human-readable.
             'mautic.contentblock.menu.index' => [
                 'route'    => 'mautic_contentblock_index',
                 'parent'   => 'mautic.core.components',

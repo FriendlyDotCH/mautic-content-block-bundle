@@ -45,5 +45,8 @@ return function (ContainerConfigurator $configurator): void {
     $services->set(MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockApiController::class)
         ->arg('$db', service('doctrine.dbal.default_connection'));
 
+    /*/$services->set(MauticPlugin\MauticContentBlockBundle\Service\ContentBlockService::class)
+        ->arg('$db', service('doctrine.dbal.default_connection'));*/
+
     $services->set('mautic.content_block.model.content_block', MauticPlugin\MauticContentBlockBundle\Model\ContentBlockModel::class);
 };

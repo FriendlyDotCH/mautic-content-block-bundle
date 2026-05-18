@@ -5,8 +5,8 @@
 (function () {
     'use strict';
 
-    var LIST_ENDPOINT  = mauticBasePath + '/s/content-blocks/list';
-    var SAVE_ENDPOINT  = mauticBasePath + '/s/content-blocks/save';
+    var LIST_ENDPOINT  = mauticBasePath + '/s/content-blocks/editor';
+    var SAVE_ENDPOINT  = mauticBasePath + '/s/content-blocks/editor';
     var PANEL_CATEGORY = 'Saved Blocks';
     var COMMAND_SAVE   = 'contentblock:save';
 

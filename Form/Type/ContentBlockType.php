@@ -26,6 +26,7 @@ class ContentBlockType extends AbstractType
                 'label_attr'  => ['class' => 'control-label'],
                 'attr'        => ['class' => 'form-control', 'maxlength' => 191],
                 'required'    => true,
+                'empty_data'  => '',
                 'constraints' => [
                     new NotBlank(['message' => 'mautic.core.value.required']),
                     new Length(['max' => 191]),
@@ -56,7 +57,8 @@ class ContentBlockType extends AbstractType
                     'rows'  => 22,
                     'style' => "font-family:'Courier New',monospace;font-size:12px;line-height:1.5;resize:vertical;",
                 ],
-                'required' => false,
+                'required'   => false,
+                'empty_data' => '',
             ])
             ->add('buttons', FormButtonsType::class);
 

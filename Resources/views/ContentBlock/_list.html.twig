@@ -86,13 +86,10 @@
         <div class="mt-80 col-md-offset-2 col-lg-offset-3 col-md-8 col-lg-5 height-auto">
             {% set childContainer %}
                 <div class="mt-32 mb-md">
-                    {% include '@MauticCore/Components/pictogram.html.twig' with {
-                        'pictogram': 'construct',
-                        'size': '80'
-                    } %}
+                    <i class="ri-layout-grid-line" style="font-size:80px;color:#ccc;"></i>
                 </div>
             {% endset %}
-            {{ include('@MauticCore/Components/content-block.html.twig', {
+            {{ include('@MauticContentBlock/Components/content-block.html.twig', {
                 heading: 'mautic.contentblock.empty.heading',
                 subheading: 'mautic.contentblock.empty.subheading',
                 copy: 'mautic.contentblock.empty.copy',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MauticPlugin\MauticContentBlockBundle\Controller;
 
 use Doctrine\DBAL\Connection;
+use JMS\Serializer\SerializerInterface;
 use Mautic\CoreBundle\Helper\InputHelper;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,6 +22,7 @@ class ContentBlockApiController extends AbstractController
         private readonly Connection $db,
         private readonly CsrfTokenManagerInterface $csrfTokenManager,
         private readonly LoggerInterface $logger,
+        private readonly SerializerInterface $serializer,
     ) {
     }
 
@@ -46,7 +48,9 @@ class ContentBlockApiController extends AbstractController
                 'thumbnail'   => $r['thumbnail'] ?? null,
             ], $rows);
 
-            return new JsonResponse(['blocks' => $blocks]);
+            $json = $this->serializer->serialize(['blocks' => $blocks], 'json');
+
+            return $this->sendJsonResponse($json);
         } catch (\Throwable $e) {
             $this->logger->error('ContentBlock list failed: '.$e->getMessage());
 
