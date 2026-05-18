@@ -1,0 +1,22 @@
+{# Empty state component: heading, subheading, copy, childContainer, cta #}
+<div class="text-center">
+    {% if heading is defined and heading %}
+        <h3>{{ heading|trans }}</h3>
+    {% endif %}
+    {% if subheading is defined and subheading %}
+        <p class="lead">{{ subheading|trans }}</p>
+    {% endif %}
+    {% if copy is defined and copy %}
+        <p>{{ copy|trans|raw }}</p>
+    {% endif %}
+    {% if childContainer is defined and childContainer %}
+        {{ childContainer|raw }}
+    {% endif %}
+    {% if cta is defined and cta %}
+        <a href="{{ cta.link }}"
+           class="btn btn-primary mt-sm"
+           {% for attr, val in (cta.attributes ?? {}) %}{{ attr }}="{{ val }}"{% endfor %}>
+            {{ cta.label|trans }}
+        </a>
+    {% endif %}
+</div>
