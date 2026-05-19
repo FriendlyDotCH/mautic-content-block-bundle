@@ -42,10 +42,6 @@ return function (ContainerConfigurator $configurator): void {
     $services->load('MauticPlugin\\MauticContentBlockBundle\\Entity\\', '../Entity/*Repository.php');
     $services->load('MauticPlugin\\MauticContentBlockBundle\\DTO\\', '../DTO/*Request.php');
 
-    // Explicit DBAL connection since Symfony can't disambiguate Connection by type alone.
-    $services->set(MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockApiController::class)
-        ->arg('$db', service('doctrine.dbal.default_connection'));
-
     /*/$services->set(MauticPlugin\MauticContentBlockBundle\Service\ContentBlockService::class)
         ->arg('$db', service('doctrine.dbal.default_connection'));*/
 

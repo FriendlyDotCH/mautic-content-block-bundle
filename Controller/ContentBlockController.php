@@ -10,8 +10,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ContentBlockController extends AbstractStandardFormController
 {
-    private const ALLOWED_CATEGORIES = ['general', 'header', 'footer', 'signature', 'legal', 'promotional'];
-
     protected function getModelName(): string
     {
         return 'content_block.content_block';
