@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MauticPlugin\MauticContentBlockBundle\Service;
 
 use MauticPlugin\MauticContentBlockBundle\DTO\ContentBlockDto;
+use MauticPlugin\MauticContentBlockBundle\DTO\SerializableDtoInterface;
 
 class DtoSerializerService
 {
@@ -13,10 +14,10 @@ class DtoSerializerService
      */
     public function serializeCollection(array $dtos): array
     {
-        return array_map(fn (ContentBlockDto $dto) => $dto->toArray(), $dtos);
+        return array_map(fn (SerializableDtoInterface $dto) => $dto->toArray(), $dtos);
     }
 
-    public function serialize(ContentBlockDto $dto): array
+    public function serialize(SerializableDtoInterface $dto): array
     {
         return $dto->toArray();
     }

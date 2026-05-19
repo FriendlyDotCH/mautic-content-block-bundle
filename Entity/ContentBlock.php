@@ -8,6 +8,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Mautic\CoreBundle\Doctrine\Mapping\ClassMetadataBuilder;
 use Mautic\CoreBundle\Entity\FormEntity;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Validator\Mapping\ClassMetadata;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'friendly_content_blocks')]
@@ -56,6 +58,14 @@ class ContentBlock extends FormEntity
             ->length(20)
             ->nullable()
             ->build();
+    }
+
+    public static function loadValidatorMetadata(ClassMetadata $metadata): void
+    {
+        $metadata->addConstraint(new UniqueEntity([
+            'fields'  => ['name'],
+            'message' => 'mautic.contentblock.validation.name_not_unique',
+        ]));
     }
 
     public function getId(): ?int

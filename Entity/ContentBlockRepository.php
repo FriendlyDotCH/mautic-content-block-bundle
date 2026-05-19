@@ -15,4 +15,15 @@ class ContentBlockRepository extends CommonRepository
     {
         return 'cb';
     }
+
+    public function nameExists(string $name): bool
+    {
+        return (bool) $this->createQueryBuilder('cb')
+            ->select('1')
+            ->where('cb.name = :name')
+            ->setParameter('name', $name)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

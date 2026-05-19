@@ -29,7 +29,7 @@ class ContentBlockType extends AbstractType
                 'empty_data'  => '',
                 'constraints' => [
                     new NotBlank(['message' => 'mautic.core.value.required']),
-                    new Length(['max' => 191]),
+                    new Length(['max' => 100]),
                 ],
             ])
             ->add('cbCategory', ChoiceType::class, [
@@ -53,12 +53,16 @@ class ContentBlockType extends AbstractType
                 'label'      => 'mautic.contentblock.html_content',
                 'label_attr' => ['class' => 'control-label'],
                 'attr'       => [
-                    'class' => 'form-control',
-                    'rows'  => 22,
-                    'style' => "font-family:'Courier New',monospace;font-size:12px;line-height:1.5;resize:vertical;",
+                    'class'     => 'form-control',
+                    'rows'      => 22,
+                    'maxlength' => 30000,
+                    'style'     => "font-family:'Courier New',monospace;font-size:12px;line-height:1.5;resize:vertical;",
                 ],
-                'required'   => false,
-                'empty_data' => '',
+                'required'    => false,
+                'empty_data'  => '',
+                'constraints' => [
+                    new Length(['max' => 30000]),
+                ],
             ])
             ->add('buttons', FormButtonsType::class);
 

@@ -13,13 +13,13 @@ return [
             'mautic_contentblock_editor_list' => [
                 'path'       => '/content-blocks/editor',
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockGrapeController::class.'::getBlocksAction',
-                'methods'    => ['GET'],
+                'method'     => 'GET',
             ],
-            // 'mautic_contentblock_editor_save' => [
-            //     'path'       => '/content-blocks/editor',
-            //     'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockGrapeController::class.'::postBlockAction',
-            //     'methods'    => ['POST'],
-            // ],
+            'mautic_contentblock_editor_save' => [
+                'path'       => '/content-blocks/editor',
+                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockGrapeController::class.'::postBlockAction',
+                'method'     => 'POST',
+            ],
             'mautic_contentblock_index' => [
                 'path'       => '/content-blocks/{page}',
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::indexAction',

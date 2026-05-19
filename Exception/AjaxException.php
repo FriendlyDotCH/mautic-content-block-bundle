@@ -7,15 +7,15 @@ namespace MauticPlugin\MauticContentBlockBundle\Exception;
 class AjaxException extends \RuntimeException
 {
     public function __construct(
-        private readonly int $statusCode,
+        private readonly string $errorCode,
         private readonly string $description,
     ) {
-        parent::__construct($description, $statusCode);
+        parent::__construct($description, $errorCode);
     }
 
-    public function getStatusCode(): int
+    public function getErrorCode(): string
     {
-        return $this->statusCode;
+        return $this->errorCode;
     }
 
     public function getDescription(): string

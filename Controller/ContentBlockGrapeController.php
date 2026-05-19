@@ -7,6 +7,7 @@ namespace MauticPlugin\MauticContentBlockBundle\Controller;
 use Mautic\CoreBundle\Controller\AjaxController;
 use MauticPlugin\MauticContentBlockBundle\Exception\AjaxException;
 use MauticPlugin\MauticContentBlockBundle\Exception\ApiErrors;
+use MauticPlugin\MauticContentBlockBundle\Service\ContentBlockRequestService;
 use MauticPlugin\MauticContentBlockBundle\Service\ContentBlockService;
 use MauticPlugin\MauticContentBlockBundle\Service\DtoSerializerService;
 use Psr\Log\LoggerInterface;
@@ -19,6 +20,7 @@ class ContentBlockGrapeController extends AjaxController
         private readonly ContentBlockService $contentBlockService,
         private readonly DtoSerializerService $contentBlockSerializer,
         private readonly LoggerInterface $mauticLogger,
+        private readonly ContentBlockRequestService $contentBlockRequestService,
     ) {
     }
 
@@ -39,12 +41,14 @@ class ContentBlockGrapeController extends AjaxController
                 'success' => true,
             ]);
         } catch (AjaxException $e) {
+            $this->mauticLogger->error($e->getTraceAsString());
+
             return $this->sendJsonResponse([
-                'error'   => ApiErrors::UNKNOWN_ERROR,
+                'error'   => $e->getErrorCode(),
                 'success' => false,
-            ], Response::HTTP_BAD_REQUEST);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         } catch (\Throwable $e) {
-            $this->mauticLogger->error('ContentBlock getBlocksAction failed: '.$e->getMessage());
+            $this->mauticLogger->error($e->getTraceAsString());
 
             return $this->sendJsonResponse([
                 'error'   => ApiErrors::UNKNOWN_ERROR,
@@ -55,25 +59,22 @@ class ContentBlockGrapeController extends AjaxController
 
     public function postBlockAction(Request $request): Response
     {
-        /**
-         * @todo finish.
-         */
         try {
             $this->mauticLogger->info('method: postBlockAction');
-            $data = $request->request->all();
-            /**
-             * @todo convert to dto
-             * validate dto
-             * save
-             */
-            $this->contentBlockService->saveBlock($data);
+
+            $dto = $this->contentBlockRequestService->parseAddBlockPayload($request->getContent());
+            $this->contentBlockRequestService->validateAddBlockPayload($dto);
+
+            $this->contentBlockService->addBlock($dto);
+            $data = $this->contentBlockSerializer->serialize($dto);
 
             return $this->sendJsonResponse([
+                'block'   => $data,
                 'success' => true,
             ], Response::HTTP_CREATED);
         } catch (AjaxException $e) {
             return $this->sendJsonResponse([
-                'error'   => ApiErrors::CONTENT_BLOCK_SAVE_ERROR,
+                'error'   => $e->getDescription(),
                 'success' => false,
             ], Response::HTTP_BAD_REQUEST);
         } catch (\Throwable $e) {

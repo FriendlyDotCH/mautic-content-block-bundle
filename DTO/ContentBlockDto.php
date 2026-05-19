@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace MauticPlugin\MauticContentBlockBundle\DTO;
 
-class ContentBlockDto
+class ContentBlockDto implements SerializableDtoInterface
 {
     private int $id;
 

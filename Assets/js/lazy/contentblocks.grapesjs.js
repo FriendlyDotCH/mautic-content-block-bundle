@@ -133,21 +133,22 @@
                     saveBtn.textContent = 'Saving…';
                     saveBtn.disabled    = true;
 
-                    var token  = (typeof mauticAjaxCsrf !== 'undefined') ? mauticAjaxCsrf : '';
-                    var params = new URLSearchParams();
-                    params.append('name',        name);
-                    params.append('icon',        icon);
-                    params.append('htmlContent', component.toHTML());
+                    var token   = (typeof mauticAjaxCsrf !== 'undefined') ? mauticAjaxCsrf : '';
+                    var payload = JSON.stringify({
+                        name:        name,
+                        icon:        icon,
+                        htmlContent: component.toHTML(),
+                    });
 
                     fetch(SAVE_ENDPOINT, {
                         method:      'POST',
                         credentials: 'same-origin',
                         headers: {
-                            'Content-Type':     'application/x-www-form-urlencoded',
+                            'Content-Type':     'application/json',
                             'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-Token':     token,
                         },
-                        body: params.toString(),
+                        body: payload,
                     })
                     .then(function (r) {
                         return r.text().then(function (text) {
