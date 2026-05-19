@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MauticPlugin\MauticContentBlockBundle\Controller;
 
 use Mautic\CoreBundle\Controller\AjaxController;
+use Mautic\CoreBundle\Security\Permissions\CorePermissions;
 use MauticPlugin\MauticContentBlockBundle\Exception\AjaxException;
 use MauticPlugin\MauticContentBlockBundle\Exception\ApiErrors;
 use MauticPlugin\MauticContentBlockBundle\Service\ContentBlockRequestService;
@@ -21,11 +22,20 @@ class ContentBlockGrapeController extends AjaxController
         private readonly DtoSerializerService $contentBlockSerializer,
         private readonly LoggerInterface $mauticLogger,
         private readonly ContentBlockRequestService $contentBlockRequestService,
+        CorePermissions $security,
     ) {
+        $this->security = $security;
     }
 
     public function getBlocksAction(Request $request): Response
     {
+        if (!$this->security->isGranted(['contentBlock:blocks:viewown', 'contentBlock:blocks:viewother'], 'MATCH_ONE')) {
+            return $this->sendJsonResponse([
+                'error'   => 'Access denied',
+                'success' => false,
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         try {
             $this->mauticLogger->info('method: getBlocksAction');
             $args                = [];
@@ -59,6 +69,13 @@ class ContentBlockGrapeController extends AjaxController
 
     public function postBlockAction(Request $request): Response
     {
+        if (!$this->security->isGranted(['contentBlock:blocks:create', 'contentBlock:blocks:full'], 'MATCH_ONE')) {
+            return $this->sendJsonResponse([
+                'error'   => 'Access denied',
+                'success' => false,
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         try {
             $this->mauticLogger->info('method: postBlockAction');
 
