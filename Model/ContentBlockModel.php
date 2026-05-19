@@ -8,6 +8,7 @@ use Mautic\CoreBundle\Model\FormModel;
 use MauticPlugin\MauticContentBlockBundle\ContentBlockEvents;
 use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlock;
 use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlockRepository;
+use MauticPlugin\MauticContentBlockBundle\Event\ContentBlockEvent;
 use MauticPlugin\MauticContentBlockBundle\Form\Type\ContentBlockType;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
@@ -19,7 +20,7 @@ use Symfony\Contracts\EventDispatcher\Event;
  */
 class ContentBlockModel extends FormModel
 {
-    public function getEntity($id = null): ?ContentBlock
+    public function getEntity(mixed $id = null): ?ContentBlock
     {
         if (null === $id) {
             return new ContentBlock();

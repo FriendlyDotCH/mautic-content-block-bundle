@@ -19,6 +19,10 @@ class ContentBlockPermissions extends AbstractPermissions
         $this->addExtendedPermissions('blocks');
     }
 
+    /**
+     * @param array<string, mixed> $options
+     * @param array<string, mixed> $data
+     */
     public function buildForm(FormBuilderInterface &$builder, array $options, array $data): void
     {
         $this->addExtendedFormFields('contentBlock', 'blocks', $builder, $data);

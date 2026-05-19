@@ -10,7 +10,7 @@ class AjaxException extends \RuntimeException
         private readonly string $errorCode,
         private readonly string $description,
     ) {
-        parent::__construct($description, $errorCode);
+        parent::__construct($description);
     }
 
     public function getErrorCode(): string

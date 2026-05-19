@@ -11,12 +11,17 @@ class DtoSerializerService
 {
     /**
      * @param ContentBlockDto[] $dtos
+     *
+     * @return array<int, array<string, mixed>>
      */
     public function serializeCollection(array $dtos): array
     {
         return array_map(fn (SerializableDtoInterface $dto) => $dto->toArray(), $dtos);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function serialize(SerializableDtoInterface $dto): array
     {
         return $dto->toArray();

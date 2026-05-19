@@ -60,7 +60,12 @@ class ContentBlockController extends AbstractStandardFormController
         return parent::batchDeleteStandard($request);
     }
 
-    protected function getViewArguments(array $args, $action): array
+    /**
+     * @param array<string, mixed> $args
+     *
+     * @return array<string, mixed>
+     */
+    protected function getViewArguments(array $args, mixed $action): array
     {
         $args['passthroughVars']['mauticContent'] = match ($action) {
             'index' => 'contentBlock',

@@ -6,5 +6,8 @@ namespace MauticPlugin\MauticContentBlockBundle\DTO;
 
 interface SerializableDtoInterface
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array;
 }

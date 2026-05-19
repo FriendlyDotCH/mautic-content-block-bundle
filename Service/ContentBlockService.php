@@ -6,18 +6,17 @@ namespace MauticPlugin\MauticContentBlockBundle\Service;
 
 use MauticPlugin\MauticContentBlockBundle\DTO\AddBlockRequest;
 use MauticPlugin\MauticContentBlockBundle\DTO\ContentBlockDto;
+use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlock;
 use MauticPlugin\MauticContentBlockBundle\Model\ContentBlockModel;
 
 class ContentBlockService
 {
-    private const ALLOWED_CATEGORIES = ['general', 'header', 'footer', 'signature', 'legal', 'promotional'];
-
     public function __construct(
         private readonly ContentBlockModel $contentBlockModel,
     ) {
     }
 
-    private function convertEntityToDto($entity): ContentBlockDto
+    private function convertEntityToDto(ContentBlock $entity): ContentBlockDto
     {
         $dto = new ContentBlockDto();
         $dto->setId($entity->getId());
@@ -31,9 +30,11 @@ class ContentBlockService
     }
 
     /**
+     * @param array<string, mixed> $args
+     *
      * @return ContentBlockDto[]
      */
-    public function getBlocks($args = [
+    public function getBlocks(array $args = [
         'start'       => 0,
         'limit'       => 100,
         'isPublished' => true,
