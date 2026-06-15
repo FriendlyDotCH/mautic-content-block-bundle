@@ -103,4 +103,82 @@ class ContentBlockGrapeController extends AjaxController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    public function patchBlockAction(Request $request, int $id): Response
+    {
+        if (!$this->security->isGranted(['contentBlock:blocks:editown', 'contentBlock:blocks:editother', 'contentBlock:blocks:full'], 'MATCH_ONE')) {
+            return $this->sendJsonResponse([
+                'error'   => 'Access denied',
+                'success' => false,
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        try {
+            $this->mauticLogger->info('method: patchBlockAction');
+
+            $dto = $this->contentBlockRequestService->parseAddBlockPayload($request->getContent());
+            $this->contentBlockRequestService->validateAddBlockPayload($dto, $id);
+
+            $updated = $this->contentBlockService->updateBlock($id, $dto);
+
+            if (null === $updated) {
+                return $this->sendJsonResponse([
+                    'error'   => ApiErrors::CONTENT_BLOCK_NOT_FOUND,
+                    'success' => false,
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            return $this->sendJsonResponse([
+                'block'   => $this->contentBlockSerializer->serialize($updated),
+                'success' => true,
+            ]);
+        } catch (AjaxException $e) {
+            return $this->sendJsonResponse([
+                'error'   => $e->getDescription(),
+                'success' => false,
+            ], Response::HTTP_BAD_REQUEST);
+        } catch (\Throwable $e) {
+            $this->mauticLogger->error('ContentBlock patchBlock failed: '.$e->getMessage());
+
+            return $this->sendJsonResponse([
+                'error'   => ApiErrors::UNKNOWN_ERROR,
+                'success' => false,
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function deleteBlockAction(Request $request, int $id): Response
+    {
+        if (!$this->security->isGranted(['contentBlock:blocks:deleteown', 'contentBlock:blocks:deleteother', 'contentBlock:blocks:full'], 'MATCH_ONE')) {
+            return $this->sendJsonResponse([
+                'error'   => 'Access denied',
+                'success' => false,
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        try {
+            $this->mauticLogger->info('method: deleteBlockAction');
+
+            $deleted = $this->contentBlockService->deleteBlock($id);
+
+            if (!$deleted) {
+                return $this->sendJsonResponse([
+                    'error'   => ApiErrors::CONTENT_BLOCK_NOT_FOUND,
+                    'success' => false,
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            return $this->sendJsonResponse([
+                'id'      => $id,
+                'success' => true,
+            ]);
+        } catch (\Throwable $e) {
+            $this->mauticLogger->error('ContentBlock deleteBlock failed: '.$e->getMessage());
+
+            return $this->sendJsonResponse([
+                'error'   => ApiErrors::UNKNOWN_ERROR,
+                'success' => false,
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }

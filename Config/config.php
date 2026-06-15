@@ -20,6 +20,18 @@ return [
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockGrapeController::class.'::postBlockAction',
                 'method'     => 'POST',
             ],
+            'mautic_contentblock_editor_update' => [
+                'path'         => '/content-blocks/editor/{id}',
+                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockGrapeController::class.'::patchBlockAction',
+                'method'       => 'POST',
+                'requirements' => ['id' => '\d+'],
+            ],
+            'mautic_contentblock_editor_delete' => [
+                'path'         => '/content-blocks/editor/{id}',
+                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockGrapeController::class.'::deleteBlockAction',
+                'method'       => 'DELETE',
+                'requirements' => ['id' => '\d+'],
+            ],
             'mautic_contentblock_index' => [
                 'path'       => '/content-blocks/{page}',
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::indexAction',

@@ -34,13 +34,13 @@ class ContentBlockRequestService
         return $addBlockRequest;
     }
 
-    public function validateAddBlockPayload(AddBlockRequest $dto): void
+    public function validateAddBlockPayload(AddBlockRequest $dto, ?int $excludeId = null): void
     {
         if (empty($dto->getName()) || strlen($dto->getName()) > 100) {
             throw new AjaxException(ApiErrors::CONTENT_BLOCK_VALIDATION_ERROR, $this->translator->trans('mautic.contentblock.validation.name_required'));
         }
 
-        if ($this->contentBlockRepository->nameExists($dto->getName())) {
+        if ($this->contentBlockRepository->nameExists($dto->getName(), $excludeId)) {
             throw new AjaxException(ApiErrors::CONTENT_BLOCK_VALIDATION_ERROR, $this->translator->trans('mautic.contentblock.validation.name_not_unique'));
         }
 

@@ -77,4 +77,32 @@ class ContentBlockService
 
         return $this->convertEntityToDto($entity);
     }
+
+    public function updateBlock(int $id, AddBlockRequest $dto): ?ContentBlockDto
+    {
+        $entity = $this->contentBlockModel->getEntity($id);
+        if (null === $entity) {
+            return null;
+        }
+
+        $entity->setName($dto->getName());
+        $entity->setHtmlContent($dto->getHtmlContent());
+        $entity->setIcon($dto->getIcon());
+
+        $this->contentBlockModel->saveEntity($entity);
+
+        return $this->convertEntityToDto($entity);
+    }
+
+    public function deleteBlock(int $id): bool
+    {
+        $entity = $this->contentBlockModel->getEntity($id);
+        if (null === $entity) {
+            return false;
+        }
+
+        $this->contentBlockModel->deleteEntity($entity);
+
+        return true;
+    }
 }

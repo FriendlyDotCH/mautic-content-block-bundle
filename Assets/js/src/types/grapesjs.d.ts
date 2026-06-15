@@ -16,11 +16,13 @@ export interface GrapesJSComponent {
 
 interface GrapesJSBlockManager {
   add(id: string, opts: {
-    label:    string;
-    category: string;
-    media?:   string;
-    content:  string;
+    label:       string;
+    category:    string;
+    media?:      string;
+    content:     string;
+    attributes?: Record<string, string>;
   }): void;
+  remove(id: string): void;
 }
 
 interface GrapesJSDomComponents {

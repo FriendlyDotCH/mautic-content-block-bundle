@@ -32,14 +32,19 @@ class ContentBlockRepository extends CommonRepository
         return 'cb';
     }
 
-    public function nameExists(string $name): bool
+    public function nameExists(string $name, ?int $excludeId = null): bool
     {
-        return (bool) $this->createQueryBuilder('cb')
+        $qb = $this->createQueryBuilder('cb')
             ->select('1')
             ->where('cb.name = :name')
             ->setParameter('name', $name)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
+            ->setMaxResults(1);
+
+        if (null !== $excludeId) {
+            $qb->andWhere('cb.id != :excludeId')
+                ->setParameter('excludeId', $excludeId);
+        }
+
+        return (bool) $qb->getQuery()->getOneOrNullResult();
     }
 }

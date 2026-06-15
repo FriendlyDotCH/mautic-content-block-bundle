@@ -13,22 +13,40 @@ import type { GrapesJSEditor, GrapesJSComponent } from './types/grapesjs.d';
 declare const mauticBasePath: string;
 declare const mauticAjaxCsrf: string | undefined;
 
-const LIST_ENDPOINT  = `${mauticBasePath}/s/content-blocks/editor`;
-const SAVE_ENDPOINT  = `${mauticBasePath}/s/content-blocks/editor`;
+const LIST_ENDPOINT    = `${mauticBasePath}/s/content-blocks/editor`;
+const SAVE_ENDPOINT    = `${mauticBasePath}/s/content-blocks/editor`;
 const DEFAULT_CATEGORY = 'General';
-const COMMAND_SAVE   = 'contentblock:save';
-const COMMAND_IMPORT = 'contentblock:import';
-const PLUGIN_NAME    = 'mautic-content-blocks';
+const COMMAND_SAVE     = 'contentblock:save';
+const COMMAND_IMPORT   = 'contentblock:import';
+const PLUGIN_NAME      = 'mautic-content-blocks';
+
+// Loaded block data, keyed by id — powers the right-click edit/delete menu.
+const blockCache    = new Map<number, ContentBlock>();
+const registeredIds = new Set<string>();
+
+// The currently-active editor (one builder open at a time); used by the
+// document-level context-menu handler which is bound only once.
+let currentEditor: GrapesJSEditor | null = null;
+let menuBound = false;
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+}
 
 // ── Blocks panel ─────────────────────────────────────────────────────────────
 
 function registerBlock(editor: GrapesJSEditor, block: ContentBlock): void {
-  editor.BlockManager.add(`content-block-${block.id}`, {
-    label:    block.name,
-    category: block.category && block.category.trim() ? block.category : DEFAULT_CATEGORY,
-    media:    iconToMedia(block.icon),
-    content:  block.htmlContent,
+  const blockId = `content-block-${block.id}`;
+  editor.BlockManager.add(blockId, {
+    label:      block.name,
+    category:   block.category && block.category.trim() ? block.category : DEFAULT_CATEGORY,
+    media:      iconToMedia(block.icon),
+    content:    block.htmlContent,
+    attributes: { 'data-cb-id': String(block.id), title: `${block.name} (right-click to edit)` },
   });
+  registeredIds.add(blockId);
+  blockCache.set(block.id, block);
 }
 
 async function fetchWithRetry(url: string, options: RequestInit, retries = 3): Promise<Response> {
@@ -59,6 +77,14 @@ async function loadAndRegister(editor: GrapesJSEditor): Promise<void> {
   } catch {
     /* silent — blocks panel simply stays empty on failure */
   }
+}
+
+// Re-sync the panel after a create / update / delete.
+function reloadBlocks(editor: GrapesJSEditor): void {
+  registeredIds.forEach(id => editor.BlockManager.remove(id));
+  registeredIds.clear();
+  blockCache.clear();
+  void loadAndRegister(editor);
 }
 
 // ── Save command + toolbar button ────────────────────────────────────────────
@@ -97,10 +123,12 @@ function addSaveAsBlockCommand(editor: GrapesJSEditor): void {
   });
 }
 
-// ── Shared save fetch ─────────────────────────────────────────────────────────
+// ── Shared upsert / delete fetches ────────────────────────────────────────────
 
-function performSave(
+// id === null → create (POST /editor); id set → update (POST /editor/{id}).
+function performUpsert(
   editor:      GrapesJSEditor,
+  id:          number | null,
   name:        string,
   icon:        string,
   htmlContent: string,
@@ -111,9 +139,10 @@ function performSave(
   saveBtn.disabled    = true;
 
   const token   = typeof mauticAjaxCsrf !== 'undefined' ? mauticAjaxCsrf : '';
+  const url     = id === null ? SAVE_ENDPOINT : `${SAVE_ENDPOINT}/${id}`;
   const payload = JSON.stringify({ name, icon, htmlContent });
 
-  fetch(SAVE_ENDPOINT, {
+  fetch(url, {
     method:      'POST',
     credentials: 'same-origin',
     headers: {
@@ -143,7 +172,7 @@ function performSave(
       return;
     }
     editor.Modal.close();
-    void loadAndRegister(editor);
+    reloadBlocks(editor);
   })
   .catch(() => {
     errEl.textContent = 'Save failed — please try again.';
@@ -152,7 +181,26 @@ function performSave(
   });
 }
 
-// ── Modal content (built fresh each open, rendered inside GrapesJS Modal) ─────
+function performDelete(editor: GrapesJSEditor, id: number): void {
+  const token = typeof mauticAjaxCsrf !== 'undefined' ? mauticAjaxCsrf : '';
+
+  fetch(`${SAVE_ENDPOINT}/${id}`, {
+    method:      'DELETE',
+    credentials: 'same-origin',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRF-Token':     token,
+    },
+  })
+  .then(r => r.json().catch(() => ({})))
+  .then((data: Record<string, unknown>) => {
+    if (data['success']) reloadBlocks(editor);
+    else window.alert('Could not delete the block.');
+  })
+  .catch(() => window.alert('Could not delete the block.'));
+}
+
+// ── Icon picker (shared) ──────────────────────────────────────────────────────
 
 function buildPickerHTML(): string {
   const svgParts = (Object.keys(SVG_ICONS) as SvgIconKey[]).map(id =>
@@ -179,9 +227,33 @@ function buildPickerHTML(): string {
   );
 }
 
-function buildModalContent(editor: GrapesJSEditor, component: GrapesJSComponent): HTMLElement {
-  let selectedIcon = '';
+// Wire the icon picker inside a modal `wrap`; returns a getter for the selection.
+function wireIconPicker(wrap: HTMLElement, initial: string): () => string {
+  let selectedIcon = initial;
 
+  const highlight = () => {
+    wrap.querySelectorAll<HTMLElement>('.cb-icon-opt').forEach(o => {
+      const active = o.dataset['icon'] === selectedIcon && selectedIcon !== '';
+      o.style.background = active ? '#3a5a3a' : '';
+      o.style.outline    = active ? '2px solid #7c9a6d' : '';
+    });
+  };
+
+  wrap.querySelector('.cb-icon-picker')!.addEventListener('click', e => {
+    const opt = (e.target as Element).closest('.cb-icon-opt') as HTMLElement | null;
+    if (!opt) return;
+    const icon = opt.dataset['icon'] ?? '';
+    selectedIcon = selectedIcon === icon ? '' : icon;
+    highlight();
+  });
+
+  highlight();
+  return () => selectedIcon;
+}
+
+// ── "Save as Block" modal (from a selected canvas component) ──────────────────
+
+function buildModalContent(editor: GrapesJSEditor, component: GrapesJSComponent): HTMLElement {
   const wrap = document.createElement('div');
   wrap.innerHTML =
     '<label style="display:block;margin-bottom:6px;font-size:12px;color:#aaa;">Block name</label>' +
@@ -202,34 +274,18 @@ function buildModalContent(editor: GrapesJSEditor, component: GrapesJSComponent)
     '</div>' +
     '<div class="cb-err" style="color:#e07070;font-size:12px;margin-top:10px;display:none;"></div>';
 
-  // All queries on the detached element — no reflow.
   const nameInput = wrap.querySelector<HTMLInputElement>('.cb-name')!;
   const saveBtn   = wrap.querySelector<HTMLButtonElement>('.cb-save')!;
   const cancelBtn = wrap.querySelector<HTMLButtonElement>('.cb-cancel')!;
   const errEl     = wrap.querySelector<HTMLDivElement>('.cb-err')!;
 
-  const showErr = (msg: string | object) => {
-    errEl.textContent   = typeof msg === 'object' ? JSON.stringify(msg) : String(msg);
-    errEl.style.display = 'block';
-  };
-
-  wrap.querySelector('.cb-icon-picker')!.addEventListener('click', e => {
-    const opt = (e.target as Element).closest('.cb-icon-opt') as HTMLElement | null;
-    if (!opt) return;
-    const icon = opt.dataset['icon'] ?? '';
-    selectedIcon = selectedIcon === icon ? '' : icon;
-    wrap.querySelectorAll<HTMLElement>('.cb-icon-opt').forEach(o => {
-      const active = o.dataset['icon'] === selectedIcon && selectedIcon !== '';
-      o.style.background = active ? '#3a5a3a' : '';
-      o.style.outline    = active ? '2px solid #7c9a6d' : '';
-    });
-  });
+  const getIcon = wireIconPicker(wrap, '');
 
   const doSave = () => {
     const name = nameInput.value.trim();
-    if (!name) { showErr('Please enter a name.'); return; }
+    if (!name) { errEl.textContent = 'Please enter a name.'; errEl.style.display = 'block'; return; }
     errEl.style.display = 'none';
-    performSave(editor, name, selectedIcon, component.toHTML(), saveBtn, errEl);
+    performUpsert(editor, null, name, getIcon(), component.toHTML(), saveBtn, errEl);
   };
 
   saveBtn.addEventListener('click', doSave);
@@ -242,11 +298,16 @@ function buildModalContent(editor: GrapesJSEditor, component: GrapesJSComponent)
   return wrap;
 }
 
-// ── Import MJML command + panel button ────────────────────────────────────────
+// ── MJML modal — shared by Import (create) and right-click Edit (update) ──────
 
-function buildImportModalContent(editor: GrapesJSEditor): HTMLElement {
-  let selectedIcon = '';
+interface MjmlModalInitial {
+  name: string;
+  icon: string;
+  mjml: string;
+  id:   number | null;
+}
 
+function buildMjmlModalContent(editor: GrapesJSEditor, initial?: MjmlModalInitial): HTMLElement {
   const wrap = document.createElement('div');
   wrap.innerHTML =
     '<label style="display:block;margin-bottom:6px;font-size:12px;color:#aaa;">Block name</label>' +
@@ -279,22 +340,13 @@ function buildImportModalContent(editor: GrapesJSEditor): HTMLElement {
   const cancelBtn = wrap.querySelector<HTMLButtonElement>('.cb-cancel')!;
   const errEl     = wrap.querySelector<HTMLDivElement>('.cb-err')!;
 
-  const showErr = (msg: string) => {
-    errEl.textContent   = msg;
-    errEl.style.display = 'block';
-  };
+  nameInput.value = initial?.name ?? '';
+  mjmlInput.value = initial?.mjml ?? '';
+  const targetId  = initial?.id ?? null;
 
-  wrap.querySelector('.cb-icon-picker')!.addEventListener('click', e => {
-    const opt = (e.target as Element).closest('.cb-icon-opt') as HTMLElement | null;
-    if (!opt) return;
-    const icon = opt.dataset['icon'] ?? '';
-    selectedIcon = selectedIcon === icon ? '' : icon;
-    wrap.querySelectorAll<HTMLElement>('.cb-icon-opt').forEach(o => {
-      const active = o.dataset['icon'] === selectedIcon && selectedIcon !== '';
-      o.style.background = active ? '#3a5a3a' : '';
-      o.style.outline    = active ? '2px solid #7c9a6d' : '';
-    });
-  });
+  const getIcon = wireIconPicker(wrap, initial?.icon ?? '');
+
+  const showErr = (msg: string) => { errEl.textContent = msg; errEl.style.display = 'block'; };
 
   const doSave = () => {
     const name = nameInput.value.trim();
@@ -302,7 +354,7 @@ function buildImportModalContent(editor: GrapesJSEditor): HTMLElement {
     if (!name) { showErr('Please enter a block name.'); return; }
     if (!mjml) { showErr('Please paste MJML code.'); return; }
     errEl.style.display = 'none';
-    performSave(editor, name, selectedIcon, mjml, saveBtn, errEl);
+    performUpsert(editor, targetId, name, getIcon(), mjml, saveBtn, errEl);
   };
 
   saveBtn.addEventListener('click', doSave);
@@ -317,7 +369,7 @@ function buildImportModalContent(editor: GrapesJSEditor): HTMLElement {
 function addImportMjmlCommand(editor: GrapesJSEditor): void {
   editor.Commands.add(COMMAND_IMPORT, {
     run(ed: GrapesJSEditor) {
-      const content = buildImportModalContent(ed);
+      const content = buildMjmlModalContent(ed);
       ed.Modal.open({ title: 'Import MJML Block', content });
       setTimeout(() => content.querySelector<HTMLInputElement>('.cb-name')?.focus(), 60);
     },
@@ -334,6 +386,96 @@ function addImportMjmlCommand(editor: GrapesJSEditor): void {
   });
 }
 
+function openEditModal(editor: GrapesJSEditor, block: ContentBlock): void {
+  const content = buildMjmlModalContent(editor, {
+    name: block.name,
+    icon: block.icon ?? '',
+    mjml: block.htmlContent,
+    id:   block.id,
+  });
+  editor.Modal.open({ title: 'Edit Block', content });
+  setTimeout(() => content.querySelector<HTMLInputElement>('.cb-name')?.focus(), 60);
+}
+
+// ── Right-click context menu on saved-block tiles ─────────────────────────────
+
+function removeContextMenu(): void {
+  document.querySelectorAll('.cb-ctx-menu').forEach(m => m.remove());
+}
+
+function showBlockContextMenu(editor: GrapesJSEditor, block: ContentBlock, x: number, y: number): void {
+  removeContextMenu();
+
+  const menu = document.createElement('div');
+  menu.className = 'cb-ctx-menu';
+  menu.style.cssText =
+    'position:fixed;z-index:100000;background:#272e33;border:1px solid #3a444b;border-radius:6px;' +
+    'padding:4px;min-width:150px;box-shadow:0 6px 24px rgba(0,0,0,.45);font-size:13px;' +
+    `left:${x}px;top:${y}px;`;
+
+  const btnStyle =
+    'display:block;width:100%;text-align:left;padding:7px 10px;border:none;border-radius:4px;' +
+    'background:transparent;color:#e0e0e0;cursor:pointer;font-size:13px;';
+
+  menu.innerHTML =
+    `<div style="padding:4px 10px 6px;color:#8a949b;font-size:11px;max-width:220px;` +
+    `white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(block.name)}</div>` +
+    `<button class="cb-ctx-edit"   style="${btnStyle}">✎ Edit…</button>` +
+    `<button class="cb-ctx-delete" style="${btnStyle}color:#e88;">🗑 Delete</button>`;
+
+  document.body.appendChild(menu);
+
+  // Nudge back on-screen if it overflows the viewport.
+  const r = menu.getBoundingClientRect();
+  if (r.right  > window.innerWidth)  menu.style.left = `${Math.max(4, window.innerWidth  - r.width  - 4)}px`;
+  if (r.bottom > window.innerHeight) menu.style.top  = `${Math.max(4, window.innerHeight - r.height - 4)}px`;
+
+  const editBtn = menu.querySelector<HTMLButtonElement>('.cb-ctx-edit')!;
+  const delBtn  = menu.querySelector<HTMLButtonElement>('.cb-ctx-delete')!;
+  editBtn.addEventListener('mouseenter', () => { editBtn.style.background = '#333d44'; });
+  editBtn.addEventListener('mouseleave', () => { editBtn.style.background = 'transparent'; });
+  delBtn.addEventListener('mouseenter',  () => { delBtn.style.background  = '#4a2e2e'; });
+  delBtn.addEventListener('mouseleave',  () => { delBtn.style.background  = 'transparent'; });
+
+  editBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    removeContextMenu();
+    openEditModal(editor, block);
+  });
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    removeContextMenu();
+    if (window.confirm(`Delete block "${block.name}"? This cannot be undone.`)) {
+      performDelete(editor, block.id);
+    }
+  });
+}
+
+function bindContextMenuOnce(): void {
+  if (menuBound) return;
+  menuBound = true;
+
+  document.addEventListener('contextmenu', (e: MouseEvent) => {
+    const tile = (e.target as Element | null)?.closest('[data-cb-id]') as HTMLElement | null;
+    if (!tile || !currentEditor) return;
+
+    const id = parseInt(tile.dataset['cbId'] ?? '', 10);
+    if (Number.isNaN(id)) return;
+
+    const block = blockCache.get(id);
+    if (!block) return;
+
+    e.preventDefault();
+    showBlockContextMenu(currentEditor, block, e.clientX, e.clientY);
+  });
+
+  document.addEventListener('click', removeContextMenu);
+  document.addEventListener('scroll', removeContextMenu, true);
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Escape') removeContextMenu();
+  });
+}
+
 // ── Plugin registration ───────────────────────────────────────────────────────
 // Guard prevents double-registration when Mautic SPA navigations re-run bodyClose scripts.
 
@@ -347,9 +489,11 @@ function init(): void {
         if (!editor.DomComponents.getType('mj-section')) {
           return;
         }
-        loadAndRegister(editor);
+        currentEditor = editor;
+        reloadBlocks(editor);
         addSaveAsBlockCommand(editor);
         addImportMjmlCommand(editor);
+        bindContextMenuOnce();
       },
     });
   }
