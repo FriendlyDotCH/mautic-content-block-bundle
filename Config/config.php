@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'name'        => 'Content Blocks',
     'description' => 'Reusable saved content blocks for the GrapesJS page/email builder.',
-    'version'     => '2.0.2',
+    'version'     => '2.1.1',
     'author'      => 'Friendly Automate',
 
     'routes' => [
@@ -41,6 +41,10 @@ return [
                 'priority' => 60,
             ],
         ],
+    ],
+
+    'categories' => [
+        'content_block' => 'mautic.contentblock.menu.index',
     ],
 
     'services' => [],

@@ -11,6 +11,22 @@ use Mautic\CoreBundle\Entity\CommonRepository;
  */
 class ContentBlockRepository extends CommonRepository
 {
+    /**
+     * @param array<string, mixed> $args
+     */
+    public function getEntities(array $args = [])
+    {
+        $q = $this->_em
+            ->createQueryBuilder()
+            ->select($this->getTableAlias().', cat')
+            ->from(ContentBlock::class, $this->getTableAlias())
+            ->leftJoin($this->getTableAlias().'.category', 'cat');
+
+        $args['qb'] = $q;
+
+        return parent::getEntities($args);
+    }
+
     public function getTableAlias(): string
     {
         return 'cb';

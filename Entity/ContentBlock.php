@@ -6,6 +6,7 @@ namespace MauticPlugin\MauticContentBlockBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Mautic\CategoryBundle\Entity\Category;
 use Mautic\CoreBundle\Doctrine\Mapping\ClassMetadataBuilder;
 use Mautic\CoreBundle\Entity\FormEntity;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
@@ -19,7 +20,7 @@ class ContentBlock extends FormEntity
 
     private string $name = '';
 
-    private ?string $cbCategory = null;
+    private ?Category $category = null;
 
     private string $htmlContent = '';
 
@@ -38,11 +39,7 @@ class ContentBlock extends FormEntity
 
         $builder->addNamedField('name', Types::STRING, 'name');
 
-        $builder->createField('cbCategory', Types::STRING)
-            ->columnName('cb_category')
-            ->length(100)
-            ->nullable()
-            ->build();
+        $builder->addCategory();
 
         $builder->createField('htmlContent', Types::TEXT)
             ->columnName('html_content')
@@ -86,15 +83,15 @@ class ContentBlock extends FormEntity
         return $this;
     }
 
-    public function getCbCategory(): ?string
+    public function getCategory(): ?Category
     {
-        return $this->cbCategory;
+        return $this->category;
     }
 
-    public function setCbCategory(?string $cbCategory): self
+    public function setCategory(?Category $category): self
     {
-        $this->isChanged('cbCategory', $cbCategory);
-        $this->cbCategory = $cbCategory;
+        $this->isChanged('category', $category);
+        $this->category = $category;
 
         return $this;
     }

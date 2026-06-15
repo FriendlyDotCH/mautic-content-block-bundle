@@ -15,7 +15,7 @@ declare const mauticAjaxCsrf: string | undefined;
 
 const LIST_ENDPOINT  = `${mauticBasePath}/s/content-blocks/editor`;
 const SAVE_ENDPOINT  = `${mauticBasePath}/s/content-blocks/editor`;
-const PANEL_CATEGORY = 'Saved Blocks';
+const DEFAULT_CATEGORY = 'General';
 const COMMAND_SAVE   = 'contentblock:save';
 const COMMAND_IMPORT = 'contentblock:import';
 const PLUGIN_NAME    = 'mautic-content-blocks';
@@ -25,7 +25,7 @@ const PLUGIN_NAME    = 'mautic-content-blocks';
 function registerBlock(editor: GrapesJSEditor, block: ContentBlock): void {
   editor.BlockManager.add(`content-block-${block.id}`, {
     label:    block.name,
-    category: PANEL_CATEGORY,
+    category: block.category && block.category.trim() ? block.category : DEFAULT_CATEGORY,
     media:    iconToMedia(block.icon),
     content:  block.htmlContent,
   });
@@ -48,10 +48,7 @@ async function loadAndRegister(editor: GrapesJSEditor): Promise<void> {
       credentials: 'same-origin',
     });
 
-    if (!response.ok) {
-      console.warn(`[ContentBlocks] Load failed: HTTP ${response.status}`);
-      return;
-    }
+    if (!response.ok) return;
 
     const data = await response.json() as unknown;
     const blocks: ContentBlock[] = Array.isArray(data)
@@ -59,9 +56,8 @@ async function loadAndRegister(editor: GrapesJSEditor): Promise<void> {
       : ((data as Record<string, unknown>).blocks as ContentBlock[] | undefined) ?? [];
 
     blocks.forEach(b => registerBlock(editor, b));
-    console.debug(`[ContentBlocks] Loaded ${blocks.length} block(s).`);
-  } catch (e) {
-    console.warn('[ContentBlocks] Load failed:', e);
+  } catch {
+    /* silent — blocks panel simply stays empty on failure */
   }
 }
 
@@ -146,15 +142,13 @@ function performSave(
       saveBtn.textContent = 'Save'; saveBtn.disabled = false;
       return;
     }
-    console.debug(`[ContentBlocks] Saved "${data['name'] as string}" id=${data['id'] as number}`);
     editor.Modal.close();
     void loadAndRegister(editor);
   })
-  .catch(e => {
-    errEl.textContent = 'Save failed — see console.';
+  .catch(() => {
+    errEl.textContent = 'Save failed — please try again.';
     errEl.style.display = 'block';
     saveBtn.textContent = 'Save'; saveBtn.disabled = false;
-    console.error('[ContentBlocks] Save error:', e);
   });
 }
 
@@ -351,10 +345,8 @@ function init(): void {
       name:   PLUGIN_NAME,
       plugin: (editor: GrapesJSEditor) => {
         if (!editor.DomComponents.getType('mj-section')) {
-          console.debug('[ContentBlocks] Not an email builder — skipping.');
           return;
         }
-        console.debug('[ContentBlocks] Email builder detected — initialising.');
         loadAndRegister(editor);
         addSaveAsBlockCommand(editor);
         addImportMjmlCommand(editor);

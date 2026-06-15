@@ -12,7 +12,7 @@ class ContentBlockDto implements SerializableDtoInterface
 
     private ?string $icon;
 
-    private ?string $cbCategory;
+    private ?string $category;
 
     private string $htmlContent;
 
@@ -54,14 +54,14 @@ class ContentBlockDto implements SerializableDtoInterface
         return $this;
     }
 
-    public function getCbCategory(): ?string
+    public function getCategory(): ?string
     {
-        return $this->cbCategory;
+        return $this->category;
     }
 
-    public function setCbCategory(?string $cbCategory): self
+    public function setCategory(?string $category): self
     {
-        $this->cbCategory = $cbCategory;
+        $this->category = $category;
 
         return $this;
     }
@@ -99,7 +99,7 @@ class ContentBlockDto implements SerializableDtoInterface
             'id'          => $this->id,
             'name'        => $this->name,
             'icon'        => $this->icon,
-            'cbCategory'  => $this->cbCategory,
+            'category'    => $this->category,
             'htmlContent' => $this->htmlContent,
             'thumbnail'   => $this->thumbnail,
         ];

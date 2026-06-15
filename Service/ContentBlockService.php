@@ -22,7 +22,7 @@ class ContentBlockService
         $dto->setId($entity->getId());
         $dto->setName($entity->getName());
         $dto->setIcon($entity->getIcon());
-        $dto->setCbCategory($entity->getCbCategory());
+        $dto->setCategory($entity->getCategory()?->getTitle());
         $dto->setHtmlContent($entity->getHtmlContent());
         $dto->setThumbnail($entity->getThumbnail());
 
@@ -68,10 +68,10 @@ class ContentBlockService
         $entity = $this->contentBlockModel->getEntity();
         $entity->setName($dto->getName());
         $entity->setHtmlContent($dto->getHtmlContent());
-        $entity->setCbCategory('general');
         $entity->setIcon($dto->getIcon());
         $entity->setThumbnail(null);
         $entity->setIsPublished(true);
+        // Category is defaulted to General by ContentBlockModel::saveEntity().
 
         $this->contentBlockModel->saveEntity($entity);
 

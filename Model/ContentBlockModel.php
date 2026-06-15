@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MauticPlugin\MauticContentBlockBundle\Model;
 
+use Mautic\CategoryBundle\Entity\Category;
+use Mautic\CategoryBundle\Model\CategoryModel;
 use Mautic\CoreBundle\Model\FormModel;
 use MauticPlugin\MauticContentBlockBundle\ContentBlockEvents;
 use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlock;
@@ -14,12 +16,23 @@ use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Contracts\EventDispatcher\Event;
+use Symfony\Contracts\Service\Attribute\Required;
 
 /**
  * @extends FormModel<ContentBlock>
  */
 class ContentBlockModel extends FormModel
 {
+    public const CATEGORY_BUNDLE = 'content_block';
+
+    private ?CategoryModel $categoryModel = null;
+
+    #[Required]
+    public function setCategoryModel(CategoryModel $categoryModel): void
+    {
+        $this->categoryModel = $categoryModel;
+    }
+
     public function getEntity(mixed $id = null): ?ContentBlock
     {
         if (null === $id) {
@@ -27,6 +40,31 @@ class ContentBlockModel extends FormModel
         }
 
         return $this->getRepository()->find($id);
+    }
+
+    /**
+     * Resolve the default "General" category for content blocks, or null if absent.
+     */
+    public function getDefaultCategory(): ?Category
+    {
+        $category = $this->categoryModel?->getRepository()->findOneBy([
+            'bundle' => self::CATEGORY_BUNDLE,
+            'alias'  => 'general',
+        ]);
+
+        return $category instanceof Category ? $category : null;
+    }
+
+    /**
+     * @param ContentBlock $entity
+     */
+    public function saveEntity($entity, $unlock = true): void
+    {
+        if ($entity instanceof ContentBlock && null === $entity->getCategory()) {
+            $entity->setCategory($this->getDefaultCategory());
+        }
+
+        parent::saveEntity($entity, $unlock);
     }
 
     public function getRepository(): ContentBlockRepository

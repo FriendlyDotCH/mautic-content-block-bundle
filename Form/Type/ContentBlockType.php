@@ -7,7 +7,6 @@ namespace MauticPlugin\MauticContentBlockBundle\Form\Type;
 use Mautic\CoreBundle\Form\Type\FormButtonsType;
 use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlock;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -32,20 +31,8 @@ class ContentBlockType extends AbstractType
                     new Length(['max' => 100]),
                 ],
             ])
-            ->add('cbCategory', ChoiceType::class, [
-                'label'      => 'mautic.core.category',
-                'label_attr' => ['class' => 'control-label'],
-                'attr'       => ['class' => 'form-control'],
-                'required'   => false,
-                'choices'    => [
-                    'General'     => 'general',
-                    'Header'      => 'header',
-                    'Footer'      => 'footer',
-                    'Signature'   => 'signature',
-                    'Legal'       => 'legal',
-                    'Promotional' => 'promotional',
-                ],
-            ])
+            // Category input hidden for now; new blocks default to General
+            // via ContentBlockModel::saveEntity().
             ->add('icon', HiddenType::class, [
                 'required' => false,
             ])

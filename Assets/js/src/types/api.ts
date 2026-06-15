@@ -2,7 +2,7 @@ export interface ContentBlock {
   id:          number;
   name:        string;
   icon:        string | null;
-  cbCategory:  string | null;
+  category:    string | null;
   htmlContent: string;
   thumbnail:   string | null;
 }

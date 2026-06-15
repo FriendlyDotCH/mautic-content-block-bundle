@@ -17,7 +17,7 @@
                     }) -}}
                     {{- include('@MauticCore/Helper/tableheader.html.twig', {
                         'sessionVar': 'contentBlock',
-                        'orderBy':    'cb.cbCategory',
+                        'orderBy':    'cat.title',
                         'text':       'mautic.core.category',
                         'class':      'visible-md visible-lg col-cb-category',
                     }) -}}
@@ -50,18 +50,27 @@
                             }) -}}
                         </td>
                         <td>
-                            {{- include('@MauticCore/Helper/publishstatus_icon.html.twig', {
-                                'item':   item,
-                                'model':  'content_block',
-                                'status': item.published ? 'published' : 'unpublished',
-                            }) -}}
-                            <span class="cb-icon-cell"
-                                  data-emoji="{{ (item.icon ?? '')|e('html_attr') }}"
-                                  style="display:inline-block;width:20px;height:20px;vertical-align:middle;margin:0 4px 0 2px;"></span>
-                            <a href="{{ path('mautic_contentblock_action', {objectAction: 'edit', objectId: item.id}) }}"
-                               data-toggle="ajax">{{ item.name|e }}</a>
+                            <div>
+                                {{- include('@MauticCore/Helper/publishstatus_icon.html.twig', {
+                                    'item':   item,
+                                    'model':  'content_block',
+                                    'status': item.published ? 'published' : 'unpublished',
+                                }) -}}
+                                <span class="cb-icon-cell"
+                                      data-emoji="{{ (item.icon ?? '')|e('html_attr') }}"
+                                      style="display:inline-block;width:20px;height:20px;vertical-align:middle;margin:0 4px 0 2px;"></span>
+                                <a href="{{ path('mautic_contentblock_action', {objectAction: 'edit', objectId: item.id}) }}"
+                                   data-toggle="ajax">{{ item.name|e }}</a>
+                            </div>
                         </td>
-                        <td class="visible-md visible-lg">{{ (item.cbCategory ?? 'general')|e }}</td>
+                        <td class="visible-md visible-lg">
+                            {%- set category = item.category -%}
+                            {%- set catName  = category ? category.title : 'mautic.core.form.uncategorized'|trans -%}
+                            {%- set color    = category and category.color ? '#' ~ category.color : '' -%}
+                            <div class="d-flex ai-center gap-xs">
+                                <span class="label label-gray label-category" style="background: {{ color }};"> </span> {{ catName|e }}
+                            </div>
+                        </td>
                         <td class="visible-md visible-lg text-muted">{{ item.dateAdded ? item.dateAdded|date('Y-m-d H:i:s') : '' }}</td>
                         <td class="visible-md visible-lg text-muted">{{ item.id }}</td>
                     </tr>

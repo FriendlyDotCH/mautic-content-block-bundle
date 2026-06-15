@@ -136,6 +136,33 @@ function buildIconGrid(
 
 // ── Mautic entry points ───────────────────────────────────────────────────────
 
+// Render the list icon cells inside the given root (defaults to document).
+// Idempotent: each cell is rendered once and flagged so observer churn is cheap.
+function renderListIcons(container?: string | Element | null): void {
+  const root: ParentNode =
+    typeof container === 'string' ? document.querySelector(container) ?? document
+    : container ?? document;
+  root.querySelectorAll<HTMLElement>('.cb-icon-cell:not([data-cb-done])').forEach(span => {
+    span.dataset['cbDone'] = '1';
+    renderIconCell(span, span.dataset['emoji'] ?? null);
+  });
+}
+
+// Build the icon picker on the edit form when present (once per grid instance).
+function renderEditGrid(): void {
+  const grid      = document.getElementById('cb-form-emoji-grid');
+  const iconInput = document.querySelector<HTMLInputElement>('[name="content_block[icon]"]');
+  if (!grid || !iconInput || grid.dataset['cbBuilt'] === '1') return;
+
+  grid.dataset['cbBuilt'] = '1';
+  buildIconGrid(grid, 'cb-form-icon-preview', 'cb-form-icon-label', iconInput, iconInput.value);
+}
+
+function renderAll(): void {
+  renderListIcons();
+  renderEditGrid();
+}
+
 function init(): void {
   if (!document.getElementById('cb-styles')) {
     const s = document.createElement('style');
@@ -146,31 +173,24 @@ function init(): void {
     document.head.appendChild(s);
   }
 
-  window.Mautic.contentBlockOnLoad = (container) => {
-    const root = (typeof container === 'string' ? document.querySelector(container) : null) ?? document;
+  if (window.Mautic) {
+    window.Mautic.contentBlockOnLoad     = (container) => renderListIcons(container);
+    window.Mautic.contentBlockEditOnLoad = () => renderEditGrid();
+  }
 
-    root.querySelectorAll<HTMLElement>('.cb-icon-cell').forEach(span => {
-      renderIconCell(span, span.dataset['emoji'] ?? null);
-    });
+  // Mautic injects list/edit markup into #app-content via AJAX — often after this
+  // bodyClose script has already run, and without reliably calling the *OnLoad hooks
+  // above (notably on hard loads). A MutationObserver guarantees the flags/icon
+  // picker render whenever their markup appears, in every navigation path.
+  renderAll();
 
-    // Reset Mautic's loadedContent cache so SPA re-navigations re-trigger this callback.
-    setTimeout(() => {
-      if (window.Mautic.loadedContent) delete window.Mautic.loadedContent['contentBlock'];
-    }, 0);
-  };
-
-  window.Mautic.contentBlockEditOnLoad = () => {
-    const grid      = document.getElementById('cb-form-emoji-grid');
-    const iconInput = document.querySelector<HTMLInputElement>('[name="content_block[icon]"]');
-    if (!grid || !iconInput) return;
-
-    buildIconGrid(grid, 'cb-form-icon-preview', 'cb-form-icon-label', iconInput, iconInput.value);
-
-    // Reset Mautic's loadedContent cache so repeated SPA navigations re-initialize the icon picker.
-    setTimeout(() => {
-      if (window.Mautic.loadedContent) delete window.Mautic.loadedContent['contentBlockEdit'];
-    }, 0);
-  };
+  let scheduled = false;
+  const observer = new MutationObserver(() => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => { scheduled = false; renderAll(); });
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
 }
 
 if (document.readyState === 'loading') {

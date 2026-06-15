@@ -22,7 +22,7 @@ class ContentBlockRequestService
         $data = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
 
         $name        = trim(InputHelper::string((string) ($data['name'] ?? '')));
-        $htmlContent = trim(InputHelper::html((string) ($data['htmlContent'] ?? '')));
+        $htmlContent = trim((string) ($data['htmlContent'] ?? ''));
         $iconRaw     = (string) ($data['icon'] ?? '');
         $icon        = mb_substr(strip_tags($iconRaw), 0, 20) ?: null;
 
