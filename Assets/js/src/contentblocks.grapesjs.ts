@@ -203,11 +203,16 @@ function performDelete(editor: GrapesJSEditor, id: number): void {
 // ── Icon picker (shared) ──────────────────────────────────────────────────────
 
 function buildPickerHTML(): string {
+  // Inline SVGs declare only a viewBox; without explicit dimensions they collapse
+  // to ~0 as flex items and render invisibly. Force a fixed render size.
+  const sizedSvg = (svg: string): string =>
+    svg.replace('<svg ', '<svg width="26" height="26" style="pointer-events:none;" ');
+
   const svgParts = (Object.keys(SVG_ICONS) as SvgIconKey[]).map(id =>
     `<span class="cb-icon-opt" data-icon="${id}" title="${SVG_LABELS[id]}" ` +
     'style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;' +
     'width:40px;height:40px;border-radius:5px;color:#ccc;flex-shrink:0;">' +
-    SVG_ICONS[id] + '</span>'
+    sizedSvg(SVG_ICONS[id]) + '</span>'
   ).join('');
 
   const flagParts = FLAG_EMOJIS.map(e =>
