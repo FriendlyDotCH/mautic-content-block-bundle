@@ -8,7 +8,7 @@ class AddBlockRequest implements SerializableDtoInterface
 {
     private string $name;
     private string $htmlContent;
-    private ?string $icon;
+    private ?string $icon = null;
 
     public function getName(): string
     {

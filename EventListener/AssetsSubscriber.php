@@ -10,10 +10,6 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetsSubscriber implements EventSubscriberInterface
 {
-    public function __construct()
-    {
-    }
-
     public static function getSubscribedEvents(): array
     {
         return [

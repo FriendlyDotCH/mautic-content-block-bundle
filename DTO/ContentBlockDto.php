@@ -10,13 +10,13 @@ class ContentBlockDto implements SerializableDtoInterface
 
     private string $name;
 
-    private ?string $icon;
+    private ?string $icon = null;
 
-    private ?string $category;
+    private ?string $category = null;
 
     private string $htmlContent;
 
-    private ?string $thumbnail;
+    private ?string $thumbnail = null;
 
     public function getId(): int
     {

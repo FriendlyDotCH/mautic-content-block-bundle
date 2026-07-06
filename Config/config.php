@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 return [
-    'name'        => 'Content Blocks',
+    'name'        => 'Friendly Content Blocks Bundle',
     'description' => 'Reusable saved content blocks for the GrapesJS page/email builder.',
-    'version'     => '2.1.1',
+    'version'     => '7.0.0',
     'author'      => 'Friendly Automate',
 
     'routes' => [

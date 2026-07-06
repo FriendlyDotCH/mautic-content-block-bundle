@@ -26,12 +26,10 @@ class ContentBlockRequestService
         $iconRaw     = (string) ($data['icon'] ?? '');
         $icon        = mb_substr(strip_tags($iconRaw), 0, 20) ?: null;
 
-        $addBlockRequest = (new AddBlockRequest())
+        return (new AddBlockRequest())
                 ->setName($name)
                 ->setHtmlContent($htmlContent)
                 ->setIcon($icon);
-
-        return $addBlockRequest;
     }
 
     public function validateAddBlockPayload(AddBlockRequest $dto, ?int $excludeId = null): void
