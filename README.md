@@ -17,59 +17,35 @@ gated by the plugin's own permissions (`contentBlock:blocks:*`).
 - PHP **8.2 – 8.5**
 - Node.js (for building the GrapesJS plugin assets, see below)
 
-## Installing for local development
+## Installing
 
-This plugin lives in its own repository (`friendly/mautic-content-block-bundle`,
-package type `mautic-plugin`) and is developed as a checkout inside a working
-Mautic instance's `plugins/` directory. Pick one of the two methods below to
-get the code in place, then run the shared "Enable the plugin" steps.
+Pick one of the two methods below to get the code in place, then run the
+shared "Enable the plugin" steps.
 
-### Option A — plain git clone (fastest for day-to-day dev)
+### Option A — via Composer
+
+The package is published on Packagist as
+[`friendly/mautic-content-block-bundle`](https://packagist.org/packages/friendly/mautic-content-block-bundle).
+Mautic ships with `composer/installers`, which understands this plugin's
+`type: mautic-plugin` and its `extra.install-directory-name` and will place it
+at `plugins/MauticContentBlockBundle` automatically.
+
+From the **Mautic root**, require the package:
+
+```bash
+composer require friendly/mautic-content-block-bundle
+```
+
+### Option B — place directly in the plugins folder
+
+Download or clone the plugin into your Mautic instance's `plugins/`
+directory, making sure the directory name is exactly
+`MauticContentBlockBundle` — Mautic discovers plugins by folder name.
 
 ```bash
 cd <mautic-root>/plugins
 git clone git@github.com:friendly/mautic-content-block-bundle.git MauticContentBlockBundle
 ```
-
-The directory name must be exactly `MauticContentBlockBundle` — Mautic
-discovers plugins by folder name, not by the git repo name.
-
-### Option B — via Composer
-
-Mautic ships with `composer/installers`, which understands this plugin's
-`type: mautic-plugin` and its `extra.install-directory-name` and will place it
-at `plugins/MauticContentBlockBundle` automatically.
-
-1. From the **Mautic root** `composer.json`, add a repository pointing at this
-   plugin's git remote (Packagist doesn't host it):
-   ```json
-   {
-     "repositories": [
-       {
-         "type": "vcs",
-         "url": "git@github.com:friendly/mautic-content-block-bundle.git"
-       }
-     ]
-   }
-   ```
-2. Require the package (use `dev-develop` or `dev-main` to track a branch
-   while developing, or a tagged version once one is cut):
-   ```bash
-   composer require friendly/mautic-content-block-bundle:dev-develop
-   ```
-3. If you need to edit the plugin's code in place rather than through
-   Composer's `vendor`-style checkout, use a `path` repository instead of
-   `vcs`, pointing at a local clone, e.g.:
-   ```json
-   {
-     "repositories": [
-       { "type": "path", "url": "../mautic-content-block-bundle", "options": { "symlink": true } }
-     ]
-   }
-   ```
-   then `composer require friendly/mautic-content-block-bundle:@dev` —
-   this symlinks the plugin into `plugins/MauticContentBlockBundle` so edits
-   in the source checkout are picked up immediately.
 
 ### Enable the plugin (both options)
 
