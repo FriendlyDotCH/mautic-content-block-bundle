@@ -44,12 +44,26 @@ class AssetsSubscriber implements EventSubscriberInterface
     }
 
     /**
-     * Returns true for routes that start with /s/.
+     * Returns true for routes that start with /s/, excluding the ones known to
+     * render a bare public-style template (no script.html.twig, no mauticBasePath)
+     * despite living under the admin path prefix.
      */
     private function isMauticAdministrationPage(): bool
     {
         $request = $this->requestStack->getCurrentRequest();
 
-        return null !== $request && preg_match('/^\/s\//', $request->getPathInfo()) >= 1;
+        if (null === $request || preg_match('/^\/s\//', $request->getPathInfo()) < 1) {
+            return false;
+        }
+
+        // /s/forms/preview/{id} dispatches to FormController::previewAction, which
+        // renders the same bare form.html.twig used by the public preview route.
+        if ('mautic_form_action' === $request->attributes->get('_route')
+            && 'preview' === $request->attributes->get('objectAction')
+        ) {
+            return false;
+        }
+
+        return true;
     }
 }
