@@ -59,10 +59,7 @@ class ContentBlock extends FormEntity
 
     public static function loadValidatorMetadata(ClassMetadata $metadata): void
     {
-        $metadata->addConstraint(new UniqueEntity([
-            'fields'  => ['name'],
-            'message' => 'mautic.contentblock.validation.name_not_unique',
-        ]));
+        $metadata->addConstraint(new UniqueEntity(fields: ['name'], message: 'mautic.contentblock.validation.name_not_unique'));
     }
 
     public function getId(): ?int
