@@ -109,6 +109,30 @@ class ContentBlockController extends AbstractStandardFormController
             default => 'contentBlockEdit',
         };
 
+        // List page: usage for the linked blocks on this page, one query for all of them.
+        if ('index' === $action && isset($args['viewParameters']['items'])) {
+            $linkedIds = [];
+            foreach ($args['viewParameters']['items'] as $item) {
+                if ($item instanceof ContentBlock && $item->isLinked()) {
+                    $linkedIds[] = (int) $item->getId();
+                }
+            }
+
+            /** @var ContentBlockModel $model */
+            $model = $this->getModel('content_block.content_block');
+
+            $args['viewParameters']['usedInEmails'] = $model->getRepository()->findEmailsUsingBlocks($linkedIds);
+        }
+
+        // Only linked blocks leave a trace in the email ({contentblock=<id>}); a copy block's
+        // MJML is indistinguishable from hand-built content once dropped, so it has no usage.
+        $entity = $args['viewParameters']['entity'] ?? null;
+        if ('edit' === $action && $entity instanceof ContentBlock && $entity->getId() && $entity->isLinked()) {
+            /** @var ContentBlockModel $model */
+            $model = $this->getModel('content_block.content_block');
+
+            $args['viewParameters']['usedInEmails'] = $model->getRepository()->findEmailsUsingBlock((int) $entity->getId());
+        }
 
         return $args;
     }

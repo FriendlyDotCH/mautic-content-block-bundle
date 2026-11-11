@@ -44,6 +44,30 @@
                             <pre class="small" style="white-space:pre-wrap;word-break:break-all;margin-bottom:4px;">&lt;mj-raw&gt;{{ entity.token }}&lt;/mj-raw&gt;</pre>
                             <p class="text-muted small">{% trans %}mautic.contentblock.linked.token.help{% endtrans %}</p>
 
+                            {% if usedInEmails is defined %}
+                                {# Collapsed by default: the list is on demand, the count is always visible. #}
+                                <details class="mt-sm">
+                                    <summary class="control-label" style="cursor:pointer;display:list-item;font-weight:600;">
+                                        {% trans %}mautic.contentblock.linked.used_in{% endtrans %}
+                                        <span class="badge">{{ usedInEmails|length }}</span>
+                                    </summary>
+                                    {% if usedInEmails is empty %}
+                                        <p class="text-muted small mt-xs">{% trans %}mautic.contentblock.linked.used_in.none{% endtrans %}</p>
+                                    {% else %}
+                                        <ul class="list-unstyled small mt-xs" style="max-height:180px;overflow-y:auto;margin-bottom:4px;">
+                                            {% for email in usedInEmails %}
+                                                <li style="padding:2px 0;">
+                                                    <a href="{{ path('mautic_email_action', {'objectAction': 'view', 'objectId': email.id}) }}" data-toggle="ajax">{{ email.name }}</a>
+                                                    <span class="text-muted">#{{ email.id }}</span>
+                                                    {% if not email.published %}
+                                                        <span class="label label-default">{% trans %}mautic.contentblock.linked.used_in.unpublished{% endtrans %}</span>
+                                                    {% endif %}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                </details>
+                            {% endif %}
                         {% else %}
                             <p class="text-muted small">{% trans %}mautic.contentblock.linked.token.new{% endtrans %}</p>
                         {% endif %}

@@ -76,25 +76,55 @@ class ContentBlockRepository extends CommonRepository
      * Emails whose stored content references this block, so deleting or unpublishing it
      * can say what would break. Matches the compiled HTML and the builder's MJML.
      *
-     * @return array<int, array{id: int, name: string}>
+     * @return array<int, array{id: int, name: string, published: bool, type: string}>
      */
     public function findEmailsUsingBlock(int $blockId): array
     {
-        $token = '%{contentblock='.$blockId.'}%';
-        $qb    = $this->_em->getConnection()->createQueryBuilder();
+        return $this->findEmailsUsingBlocks([$blockId])[$blockId] ?? [];
+    }
 
-        return array_map(
-            static fn (array $row): array => ['id' => (int) $row['id'], 'name' => (string) $row['name']],
-            $qb->select('DISTINCT e.id, e.name')
-                ->from('emails', 'e')
-                ->leftJoin('e', 'bundle_grapesjsbuilder', 'g', 'g.email_id = e.id')
-                ->where($qb->expr()->or(
-                    $qb->expr()->like('e.custom_html', ':token'),
-                    $qb->expr()->like('g.custom_mjml', ':token')
-                ))
-                ->setParameter('token', $token)
-                ->executeQuery()
-                ->fetchAllAssociative()
-        );
+    /**
+     * Same lookup for several blocks in one query (the list page), keyed by block id.
+     * Blocks no email references are absent from the result.
+     *
+     * @param int[] $blockIds
+     *
+     * @return array<int, array<int, array{id: int, name: string, published: bool, type: string}>>
+     */
+    public function findEmailsUsingBlocks(array $blockIds): array
+    {
+        $blockIds = array_values(array_unique(array_map('intval', $blockIds)));
+        if ([] === $blockIds) {
+            return [];
+        }
+
+        $qb    = $this->_em->getConnection()->createQueryBuilder();
+        $token = "CONCAT('%{contentblock=', cb.id, '}%')";
+
+        $rows = $qb->select('DISTINCT cb.id AS block_id, e.id, e.name, e.is_published, e.email_type')
+            ->from('friendly_content_blocks', 'cb')
+            ->innerJoin('cb', 'emails', 'e', '1 = 1')
+            ->leftJoin('e', 'bundle_grapesjsbuilder', 'g', 'g.email_id = e.id')
+            ->where($qb->expr()->in('cb.id', ':ids'))
+            ->andWhere($qb->expr()->or(
+                'e.custom_html LIKE '.$token,
+                'g.custom_mjml LIKE '.$token
+            ))
+            ->setParameter('ids', $blockIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)
+            ->orderBy('e.name')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $byBlock = [];
+        foreach ($rows as $row) {
+            $byBlock[(int) $row['block_id']][] = [
+                'id'        => (int) $row['id'],
+                'name'      => (string) $row['name'],
+                'published' => (bool) $row['is_published'],
+                'type'      => (string) $row['email_type'],
+            ];
+        }
+
+        return $byBlock;
     }
 }

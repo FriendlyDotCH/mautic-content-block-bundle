@@ -23,6 +23,11 @@
                     }) -}}
                     {{- include('@MauticCore/Helper/tableheader.html.twig', {
                         'sessionVar': 'contentBlock',
+                        'text':       'mautic.contentblock.list.emails',
+                        'class':      'col-cb-emails',
+                    }) -}}
+                    {{- include('@MauticCore/Helper/tableheader.html.twig', {
+                        'sessionVar': 'contentBlock',
                         'orderBy':    'date_added',
                         'text':       'mautic.core.date.added',
                         'class':      'visible-md visible-lg col-cb-date',
@@ -80,6 +85,35 @@
                             <div class="d-flex ai-center gap-xs">
                                 <span class="label label-gray label-category" style="background: {{ color }};"> </span> {{ catName|e }}
                             </div>
+                        </td>
+                        <td class="col-cb-emails">
+                            {% if item.linked %}
+                                {%- set emails = (usedInEmails ?? {})[item.id] ?? [] -%}
+                                {% if emails is empty %}
+                                    <span class="text-muted">0</span>
+                                {% else %}
+                                    {# Collapsed by default, like on the edit form. #}
+                                    <details>
+                                        <summary style="cursor:pointer;display:list-item;">
+                                            <span class="badge">{{ emails|length }}</span>
+                                        </summary>
+                                        <ul class="list-unstyled small mt-xs mb-0" style="max-height:180px;overflow-y:auto;">
+                                            {% for email in emails %}
+                                                <li style="padding:2px 0;">
+                                                    <a href="{{ path('mautic_email_action', {'objectAction': 'view', 'objectId': email.id}) }}" data-toggle="ajax">{{ email.name }}</a>
+                                                    <span class="text-muted">#{{ email.id }}</span>
+                                                    {% if not email.published %}
+                                                        <span class="label label-default">{% trans %}mautic.contentblock.linked.used_in.unpublished{% endtrans %}</span>
+                                                    {% endif %}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </details>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted" data-toggle="tooltip" data-container="body"
+                                      title="{{ 'mautic.contentblock.list.emails.copy'|trans }}">&mdash;</span>
+                            {% endif %}
                         </td>
                         <td class="visible-md visible-lg text-muted">{{ item.dateAdded ? item.dateAdded|date('Y-m-d H:i:s') : '' }}</td>
                         <td class="visible-md visible-lg text-muted">{{ item.id }}</td>
