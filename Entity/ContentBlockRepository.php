@@ -47,4 +47,54 @@ class ContentBlockRepository extends CommonRepository
 
         return (bool) $qb->getQuery()->getOneOrNullResult();
     }
+
+    /**
+     * Every published linked block, as plain rows. One query per sending process.
+     *
+     * @return array<int, array{id: int, name: string, icon: ?string, compiled_html: string}>
+     */
+    public function getPublishedLinked(): array
+    {
+        $qb = $this->_em->getConnection()->createQueryBuilder();
+
+        $rows = $qb->select('cb.id, cb.name, cb.icon, cb.compiled_html')
+            ->from('friendly_content_blocks', 'cb')
+            ->where('cb.is_linked = 1')
+            ->andWhere('cb.is_published = 1')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        return array_map(static fn (array $row): array => [
+            'id'            => (int) $row['id'],
+            'name'          => (string) $row['name'],
+            'icon'          => null !== $row['icon'] && '' !== $row['icon'] ? (string) $row['icon'] : null,
+            'compiled_html' => (string) ($row['compiled_html'] ?? ''),
+        ], $rows);
+    }
+
+    /**
+     * Emails whose stored content references this block, so deleting or unpublishing it
+     * can say what would break. Matches the compiled HTML and the builder's MJML.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    public function findEmailsUsingBlock(int $blockId): array
+    {
+        $token = '%{contentblock='.$blockId.'}%';
+        $qb    = $this->_em->getConnection()->createQueryBuilder();
+
+        return array_map(
+            static fn (array $row): array => ['id' => (int) $row['id'], 'name' => (string) $row['name']],
+            $qb->select('DISTINCT e.id, e.name')
+                ->from('emails', 'e')
+                ->leftJoin('e', 'bundle_grapesjsbuilder', 'g', 'g.email_id = e.id')
+                ->where($qb->expr()->or(
+                    $qb->expr()->like('e.custom_html', ':token'),
+                    $qb->expr()->like('g.custom_mjml', ':token')
+                ))
+                ->setParameter('token', $token)
+                ->executeQuery()
+                ->fetchAllAssociative()
+        );
+    }
 }

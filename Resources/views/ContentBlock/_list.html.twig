@@ -61,6 +61,16 @@
                                       style="display:inline-block;width:20px;height:20px;vertical-align:middle;margin:0 4px 0 2px;"></span>
                                 <a href="{{ path('mautic_contentblock_action', {objectAction: 'edit', objectId: item.id}) }}"
                                    data-toggle="ajax">{{ item.name|e }}</a>
+                                {# Same inline-icon pattern as segment names (ri-* + fs-14 + title). #}
+                                {% if item.linked %}
+                                    <i class="ri-fw ri-links-fill fs-14 text-primary"
+                                       data-toggle="tooltip" data-container="body" data-placement="top"
+                                       title="{{ 'mautic.contentblock.badge.linked'|trans }}"></i>
+                                {% else %}
+                                    <i class="ri-fw ri-file-copy-fill fs-14 text-muted"
+                                       data-toggle="tooltip" data-container="body" data-placement="top"
+                                       title="{{ 'mautic.contentblock.badge.static'|trans }}"></i>
+                                {% endif %}
                             </div>
                         </td>
                         <td class="visible-md visible-lg">

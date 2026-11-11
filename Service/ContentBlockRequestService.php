@@ -14,6 +14,7 @@ class ContentBlockRequestService
     public function __construct(
         private readonly TranslatorInterface $translator,
         private readonly ContentBlockRepository $contentBlockRepository,
+        private readonly ThemeMjmlProvider $themeMjmlProvider,
     ) {
     }
 
@@ -26,10 +27,20 @@ class ContentBlockRequestService
         $iconRaw     = (string) ($data['icon'] ?? '');
         $icon        = mb_substr(strip_tags($iconRaw), 0, 20) ?: null;
 
+        // Only "Save as Block" in the builder sends these; edits from the builder never do,
+        // so they are applied on create only (see ContentBlockService::addBlock()).
+        $linked       = true === ($data['linked'] ?? false);
+        $compiledHtml = trim((string) ($data['compiledHtml'] ?? '')) ?: null;
+        $theme        = (string) ($data['theme'] ?? '');
+        $theme        = array_key_exists($theme, $this->themeMjmlProvider->getEmailThemeChoices()) ? $theme : null;
+
         $addBlockRequest = (new AddBlockRequest())
                 ->setName($name)
                 ->setHtmlContent($htmlContent)
-                ->setIcon($icon);
+                ->setIcon($icon)
+                ->setLinked($linked)
+                ->setCompiledHtml($linked ? $compiledHtml : null)
+                ->setTheme($theme);
 
         return $addBlockRequest;
     }
@@ -46,6 +57,11 @@ class ContentBlockRequestService
 
         if (empty($dto->getHtmlContent()) || strlen($dto->getHtmlContent()) > 30000) {
             throw new AjaxException(ApiErrors::CONTENT_BLOCK_VALIDATION_ERROR, $this->translator->trans('mautic.contentblock.validation.html_required'));
+        }
+
+        // A linked block is injected at send time, where there is no MJML compiler.
+        if ($dto->isLinked() && null === $dto->getCompiledHtml()) {
+            throw new AjaxException(ApiErrors::CONTENT_BLOCK_VALIDATION_ERROR, $this->translator->trans('mautic.contentblock.validation.compiled_required'));
         }
     }
 }

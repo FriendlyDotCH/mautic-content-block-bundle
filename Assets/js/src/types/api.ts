@@ -5,7 +5,22 @@ export interface ContentBlock {
   category:    string | null;
   htmlContent: string;
   thumbnail:   string | null;
+  /** Linked blocks are referenced by token, not copied into the email. */
+  linked:      boolean;
 }
+
+/** One published linked block, as returned by GET /s/content-blocks/editor/linked. */
+export interface LinkedBlock {
+  id:   number;
+  name: string;
+  icon: string | null;
+  html: string;
+}
+
+/** GET /s/content-blocks/editor/linked */
+export type LinkedResponse =
+  | { success: true;  blocks: Record<string, LinkedBlock>; editUrl: string | null }
+  | { success: false; error: string };
 
 /** GET /s/content-blocks/editor */
 export type ListResponse =

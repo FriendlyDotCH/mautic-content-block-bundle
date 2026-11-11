@@ -18,6 +18,8 @@ class ContentBlockDto implements SerializableDtoInterface
 
     private ?string $thumbnail;
 
+    private bool $linked = false;
+
     public function getId(): int
     {
         return $this->id;
@@ -102,6 +104,19 @@ class ContentBlockDto implements SerializableDtoInterface
             'category'    => $this->category,
             'htmlContent' => $this->htmlContent,
             'thumbnail'   => $this->thumbnail,
+            'linked'      => $this->linked,
         ];
+    }
+
+    public function isLinked(): bool
+    {
+        return $this->linked;
+    }
+
+    public function setLinked(bool $linked): self
+    {
+        $this->linked = $linked;
+
+        return $this;
     }
 }

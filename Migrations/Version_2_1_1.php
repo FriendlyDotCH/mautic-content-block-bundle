@@ -9,7 +9,7 @@ use Doctrine\DBAL\Schema\SchemaException;
 use Mautic\IntegrationsBundle\Migration\AbstractMigration;
 
 /**
- * Drops the legacy free-text cb_category column now that blocks use
+ * Drops the legacy free-text category column now that blocks use
  * the built-in CategoryBundle relation (category_id).
  */
 class Version_2_1_1 extends AbstractMigration
@@ -19,7 +19,7 @@ class Version_2_1_1 extends AbstractMigration
     protected function isApplicable(Schema $schema): bool
     {
         try {
-            return $schema->getTable($this->concatPrefix($this->table))->hasColumn('cb_category');
+            return $schema->getTable($this->concatPrefix($this->table))->hasColumn('category');
         } catch (SchemaException) {
             return false;
         }
@@ -28,6 +28,6 @@ class Version_2_1_1 extends AbstractMigration
     protected function up(): void
     {
         $blocks = $this->concatPrefix($this->table);
-        $this->addSql("ALTER TABLE `{$blocks}` DROP COLUMN `cb_category`");
+        $this->addSql("ALTER TABLE `{$blocks}` DROP COLUMN `category`");
     }
 }

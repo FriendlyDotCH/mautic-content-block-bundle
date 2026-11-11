@@ -18,6 +18,7 @@ const shared = {
 const entries = [
   { in: 'Assets/js/src/contentblocks.grapesjs.ts', out: 'Assets/js/dist/contentblocks.grapesjs.js' },
   { in: 'Assets/js/src/contentblocks.admin.ts',   out: 'Assets/js/dist/contentblocks.admin.js' },
+  { in: 'Assets/js/src/contentblocks.editor.ts',  out: 'Assets/js/dist/contentblocks.editor.js' },
 ];
 
 const configs = entries.map(e => ({

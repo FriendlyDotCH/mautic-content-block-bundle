@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace MauticPlugin\MauticContentBlockBundle\Form\Type;
 
 use Mautic\CoreBundle\Form\Type\FormButtonsType;
+use Mautic\CoreBundle\Form\Type\YesNoButtonGroupType;
 use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlock;
+use MauticPlugin\MauticContentBlockBundle\Service\ThemeMjmlProvider;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -17,6 +20,11 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 
 class ContentBlockType extends AbstractType
 {
+    public function __construct(
+        private ThemeMjmlProvider $themeMjmlProvider
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -35,6 +43,28 @@ class ContentBlockType extends AbstractType
             // via ContentBlockModel::saveEntity().
             ->add('icon', HiddenType::class, [
                 'required' => false,
+            ])
+            // No 'data' option: the value is read from the entity through getLinked(),
+            // so a failed submit re-renders with what the user chose, not the stored value.
+            ->add('linked', YesNoButtonGroupType::class, [
+                'label' => 'mautic.contentblock.linked',
+                'attr'  => ['tooltip' => 'mautic.contentblock.linked.tooltip'],
+            ])
+            // Written by the browser on save: a linked block is injected at send time, where
+            // there is no MJML compiler, so its HTML has to be compiled here first.
+            ->add('compiledHtml', HiddenType::class, [
+                'required' => false,
+            ])
+            ->add('theme', ChoiceType::class, [
+                'label'       => 'mautic.contentblock.theme',
+                'label_attr'  => ['class' => 'control-label'],
+                'choices'     => array_flip($this->themeMjmlProvider->getEmailThemeChoices()),
+                'required'    => false,
+                'placeholder' => 'mautic.contentblock.theme.none',
+                'attr'        => [
+                    'class'   => 'form-control',
+                    'tooltip' => 'mautic.contentblock.theme.tooltip',
+                ],
             ])
             ->add('htmlContent', TextareaType::class, [
                 'label'      => 'mautic.contentblock.html_content',

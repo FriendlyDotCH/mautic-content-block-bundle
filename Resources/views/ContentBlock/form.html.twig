@@ -14,16 +14,40 @@
 
 {{ form_start(form, {'attr': {'data-toggle': 'ajax'}}) }}
 
-
-<div class="box-layout">
+{# data-mjml-lib is fetched on demand by the editor script: the compiler is ~1.3 MB
+   and must not load on every admin page. #}
+<div class="box-layout" id="cb-mjml-editor"
+     data-mjml-lib="{{ getAssetUrl('plugins/MauticContentBlockBundle/Assets/vendor/mjml-browser.js') }}"
+     data-theme-url="{{ path('mautic_contentblock_editor_theme', {'theme': '__THEME__'}) }}">
 
     <div class="col-md-12 height-auto">
         <div class="pa-md">
 
+            <div class="row">
+                <div class="col-sm-6">
+                    {{ form_row(form.name) }}
+                </div>
+                <div class="col-sm-6">
+                    {{ form_row(form.theme) }}
+                </div>
+            </div>
 
             <div class="row">
-                <div class="col-sm-12">
-                    {{ form_row(form.name) }}
+                <div class="col-sm-6">
+                    {{ form_row(form.linked) }}
+                </div>
+                <div class="col-sm-6">
+                    {# Shown only for linked blocks; toggled by contentblocks.editor.ts #}
+                    <div id="cb-linked-usage" style="display:none;">
+                        <label class="control-label">{% trans %}mautic.contentblock.linked.token{% endtrans %}</label>
+                        {% if entity is not null and entity.id %}
+                            <pre class="small" style="white-space:pre-wrap;word-break:break-all;margin-bottom:4px;">&lt;mj-raw&gt;{{ entity.token }}&lt;/mj-raw&gt;</pre>
+                            <p class="text-muted small">{% trans %}mautic.contentblock.linked.token.help{% endtrans %}</p>
+
+                        {% else %}
+                            <p class="text-muted small">{% trans %}mautic.contentblock.linked.token.new{% endtrans %}</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -41,7 +65,32 @@
                 {{ form_widget(form.icon) }}
             </div>
 
-            {{ form_row(form.htmlContent) }}
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_row(form.htmlContent) }}
+                    <div id="cb-editor-status" class="alert alert-info small" style="display:none;"></div>
+                </div>
+                <div class="col-md-6">
+                    <label class="control-label">{% trans %}mautic.contentblock.preview{% endtrans %}</label>
+                    {# sandboxed: the preview cannot run scripts or reach the Mautic UI #}
+                    <iframe id="cb-editor-preview" sandbox="" title="{% trans %}mautic.contentblock.preview{% endtrans %}"
+                            style="width:100%; height:560px; border:1px solid #ddd; background:#fff;"></iframe>
+                </div>
+            </div>
+
+            <details class="mt-md mb-lg">
+                <summary class="text-muted" style="cursor:pointer; display:list-item;">
+                    {% trans %}mautic.contentblock.compiled{% endtrans %}
+                </summary>
+                <p class="text-muted small mt-sm" id="cb-compiled-help">{% trans %}mautic.contentblock.compiled.tooltip{% endtrans %}</p>
+                {# Read-only mirror. For linked blocks the same HTML is submitted through
+                   form.compiledHtml below, because that is what gets injected at send time. #}
+                <textarea id="cb-generated-html" class="form-control" rows="12" readonly
+                          spellcheck="false"
+                          style="font-family:'Courier New',monospace;font-size:12px;line-height:1.5;background:#f7f7f7;"></textarea>
+            </details>
+
+            {{ form_widget(form.compiledHtml) }}
 
         </div>
     </div>
