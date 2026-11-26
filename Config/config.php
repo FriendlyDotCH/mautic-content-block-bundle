@@ -72,10 +72,4 @@ return [
     ],
 
     'services' => [],
-
-    'parameters' => [
-        // Seconds a sending process keeps linked blocks in memory before re-reading them.
-        // Only matters for long-running workers; cron runs are separate processes anyway.
-        'content_block_cache_ttl' => 60,
-    ],
 ];

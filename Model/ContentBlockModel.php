@@ -28,7 +28,9 @@ class ContentBlockModel extends FormModel
     private ?CategoryModel $categoryModel = null;
 
     #[Required]
-    public function setCategoryModel(CategoryModel $categoryModel): void
+    public function setCategoryModel(
+        CategoryModel $categoryModel
+    ): void
     {
         $this->categoryModel = $categoryModel;
     }
@@ -62,6 +64,13 @@ class ContentBlockModel extends FormModel
     {
         if ($entity instanceof ContentBlock && null === $entity->getCategory()) {
             $entity->setCategory($this->getDefaultCategory());
+        }
+
+        // FormModel only fills dateModified while it is empty, so after the first save it would
+        // never move again. Core controllers (Asset, Page, Campaign) bump it themselves; do the
+        // same here so both the block form and the builder's save path get it.
+        if ($entity instanceof ContentBlock && !$this->isNewEntity($entity) && [] !== $entity->getChanges()) {
+            $entity->setDateModified(new \DateTime());
         }
 
         parent::saveEntity($entity, $unlock);

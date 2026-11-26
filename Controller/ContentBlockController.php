@@ -91,7 +91,8 @@ class ContentBlockController extends AbstractStandardFormController
         $this->addFlashMessage(
             'mautic.contentblock.delete.in_use',
             ['%name%' => $entity->getName(), '%count%' => count($emails), '%emails%' => implode(', ', $names)],
-            'error'
+            'error',
+            'messages'
         );
 
         return $this->redirectToRoute('mautic_contentblock_index');

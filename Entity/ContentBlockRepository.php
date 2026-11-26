@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace MauticPlugin\MauticContentBlockBundle\Entity;
 
+use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\ORM\Query\Expr\Join;
 use Mautic\CoreBundle\Entity\CommonRepository;
+use Mautic\EmailBundle\Entity\Email;
+use MauticPlugin\GrapesJsBuilderBundle\Entity\GrapesJsBuilder;
 
 /**
  * @extends CommonRepository<ContentBlock>
@@ -55,20 +59,20 @@ class ContentBlockRepository extends CommonRepository
      */
     public function getPublishedLinked(): array
     {
-        $qb = $this->_em->getConnection()->createQueryBuilder();
-
-        $rows = $qb->select('cb.id, cb.name, cb.icon, cb.compiled_html')
-            ->from('friendly_content_blocks', 'cb')
-            ->where('cb.is_linked = 1')
-            ->andWhere('cb.is_published = 1')
-            ->executeQuery()
-            ->fetchAllAssociative();
+        $rows = $this->createQueryBuilder('cb')
+            ->select('cb.id, cb.name, cb.icon, cb.compiledHtml')
+            ->where('cb.linked = :linked')
+            ->andWhere('cb.isPublished = :published')
+            ->setParameter('linked', true)
+            ->setParameter('published', true)
+            ->getQuery()
+            ->getArrayResult();
 
         return array_map(static fn (array $row): array => [
             'id'            => (int) $row['id'],
             'name'          => (string) $row['name'],
             'icon'          => null !== $row['icon'] && '' !== $row['icon'] ? (string) $row['icon'] : null,
-            'compiled_html' => (string) ($row['compiled_html'] ?? ''),
+            'compiled_html' => (string) ($row['compiledHtml'] ?? ''),
         ], $rows);
     }
 
@@ -98,22 +102,18 @@ class ContentBlockRepository extends CommonRepository
             return [];
         }
 
-        $qb    = $this->_em->getConnection()->createQueryBuilder();
         $token = "CONCAT('%{contentblock=', cb.id, '}%')";
 
-        $rows = $qb->select('DISTINCT cb.id AS block_id, e.id, e.name, e.is_published, e.email_type')
-            ->from('friendly_content_blocks', 'cb')
-            ->innerJoin('cb', 'emails', 'e', '1 = 1')
-            ->leftJoin('e', 'bundle_grapesjsbuilder', 'g', 'g.email_id = e.id')
-            ->where($qb->expr()->in('cb.id', ':ids'))
-            ->andWhere($qb->expr()->or(
-                'e.custom_html LIKE '.$token,
-                'g.custom_mjml LIKE '.$token
-            ))
-            ->setParameter('ids', $blockIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)
+        $rows = $this->_em->createQueryBuilder()
+            ->select('DISTINCT cb.id AS block_id, e.id, e.name, e.isPublished AS is_published, e.emailType AS email_type')
+            ->from(Email::class, 'e')
+            ->leftJoin(GrapesJsBuilder::class, 'g', Join::WITH, 'g.email = e')
+            ->innerJoin(ContentBlock::class, 'cb', Join::WITH, 'cb.id IN (:ids)')
+            ->where('e.customHtml LIKE '.$token.' OR g.customMjml LIKE '.$token)
+            ->setParameter('ids', $blockIds, ArrayParameterType::INTEGER)
             ->orderBy('e.name')
-            ->executeQuery()
-            ->fetchAllAssociative();
+            ->getQuery()
+            ->getArrayResult();
 
         $byBlock = [];
         foreach ($rows as $row) {

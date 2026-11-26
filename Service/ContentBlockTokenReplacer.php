@@ -26,8 +26,8 @@ class ContentBlockTokenReplacer
     }
 
     /**
-     * @param callable(int): ?string $resolve  returns the replacement, or null when unresolvable
-     * @param list<int>              $missing  ids that could not be resolved, appended in place
+     * @param callable(int): ?string $resolve returns the replacement, or null when unresolvable
+     * @param list<int>              $missing ids that could not be resolved, appended in place
      */
     public function replace(string $content, callable $resolve, array &$missing = []): string
     {

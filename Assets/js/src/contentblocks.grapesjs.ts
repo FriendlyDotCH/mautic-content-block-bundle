@@ -19,7 +19,7 @@ const LINKED_ENDPOINT  = `${mauticBasePath}/s/content-blocks/editor/linked`;
 const SAVE_ENDPOINT    = `${mauticBasePath}/s/content-blocks/editor`;
 const THEME_ENDPOINT   = `${mauticBasePath}/s/content-blocks/editor/theme/`;
 // ~1.3 MB, so fetched only when a section is saved as a linked block.
-const MJML_LIB_URL     = `${mauticBasePath}/plugins/MauticContentBlockBundle/Assets/vendor/mjml-browser.js`;
+const MJML_LIB_URL     = `${mauticBasePath}/plugins/MauticContentBlockBundle/Assets/js/dist/mjml-browser.js`;
 const DEFAULT_CATEGORY = 'General';
 const COMMAND_SAVE     = 'contentblock:save';
 const COMMAND_IMPORT   = 'contentblock:import';

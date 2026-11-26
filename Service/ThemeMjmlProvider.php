@@ -22,7 +22,7 @@ class ThemeMjmlProvider
     public function __construct(
         private ThemeHelperInterface $themeHelper,
         private Environment $twig,
-        private LoggerInterface $logger
+        private LoggerInterface $logger,
     ) {
     }
 

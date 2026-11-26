@@ -21,7 +21,7 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 class ContentBlockType extends AbstractType
 {
     public function __construct(
-        private ThemeMjmlProvider $themeMjmlProvider
+        private ThemeMjmlProvider $themeMjmlProvider,
     ) {
     }
 

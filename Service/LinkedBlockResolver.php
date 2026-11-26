@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace MauticPlugin\MauticContentBlockBundle\Service;
 
-use Mautic\CoreBundle\Helper\CoreParametersHelper;
 use Mautic\EmailBundle\Helper\PlainTextHelper;
 use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlockRepository;
 
@@ -12,8 +11,8 @@ use MauticPlugin\MauticContentBlockBundle\Entity\ContentBlockRepository;
  * Loads every published linked block ONCE per process (one query) and keeps it in memory,
  * so a broadcast to 100k contacts costs one query rather than 100k.
  *
- * The cache is dropped after `content_block_cache_ttl` seconds so long-running messenger
- * workers pick up edits made by another process.
+ * The cache is dropped after the configured cache TTL (Plugins > Content Blocks, default 60s) so
+ * long-running messenger workers pick up edits made by another process.
  */
 class LinkedBlockResolver
 {
@@ -28,7 +27,7 @@ class LinkedBlockResolver
 
     public function __construct(
         private ContentBlockRepository $repository,
-        private CoreParametersHelper $coreParametersHelper
+        private ContentBlockConfigService $configService,
     ) {
     }
 
@@ -94,7 +93,7 @@ class LinkedBlockResolver
      */
     private function getBlocks(): array
     {
-        $ttl = (int) $this->coreParametersHelper->get('content_block_cache_ttl', 60);
+        $ttl = $this->configService->getCacheTtl();
 
         if (null === $this->blocks || ($ttl > 0 && time() - $this->loadedAt > $ttl)) {
             $this->blocks = [];

@@ -6,10 +6,13 @@ namespace MauticPlugin\MauticContentBlockBundle\EventListener;
 
 use Mautic\CoreBundle\CoreEvents;
 use Mautic\CoreBundle\Event\CustomAssetsEvent;
+use Mautic\CoreBundle\Helper\CoreParametersHelper;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetsSubscriber implements EventSubscriberInterface
 {
+    private const BUNDLE = 'MauticContentBlockBundle';
+
     private const SCRIPTS = [
         'contentblocks.admin.js',
         'contentblocks.grapesjs.js',
@@ -17,7 +20,7 @@ class AssetsSubscriber implements EventSubscriberInterface
     ];
 
     public function __construct(
-        private string $pluginPath = __DIR__.'/..'
+        private CoreParametersHelper $coreParametersHelper,
     ) {
     }
 
@@ -48,8 +51,9 @@ class AssetsSubscriber implements EventSubscriberInterface
      */
     private function versioned(string $script): string
     {
-        $relative = 'plugins/MauticContentBlockBundle/Assets/js/dist/'.$script;
-        $mtime    = @filemtime($this->pluginPath.'/Assets/js/dist/'.$script);
+        $bundle   = $this->coreParametersHelper->get('plugin.bundles')[self::BUNDLE] ?? [];
+        $relative = ($bundle['relative'] ?? 'plugins/'.self::BUNDLE).'/Assets/js/dist/'.$script;
+        $mtime    = isset($bundle['directory']) ? @filemtime($bundle['directory'].'/Assets/js/dist/'.$script) : false;
 
         return $mtime ? $relative.'?cb='.$mtime : $relative;
     }

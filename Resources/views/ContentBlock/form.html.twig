@@ -17,7 +17,7 @@
 {# data-mjml-lib is fetched on demand by the editor script: the compiler is ~1.3 MB
    and must not load on every admin page. #}
 <div class="box-layout" id="cb-mjml-editor"
-     data-mjml-lib="{{ getAssetUrl('plugins/MauticContentBlockBundle/Assets/vendor/mjml-browser.js') }}"
+     data-mjml-lib="{{ getAssetUrl('plugins/MauticContentBlockBundle/Assets/js/dist/mjml-browser.js') }}"
      data-theme-url="{{ path('mautic_contentblock_editor_theme', {'theme': '__THEME__'}) }}">
 
     <div class="col-md-12 height-auto">

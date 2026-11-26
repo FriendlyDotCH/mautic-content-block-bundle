@@ -5,7 +5,7 @@ const path   = require('path');
 global.window   = global;
 global.document = { getElementById: () => null, addEventListener: () => {}, readyState: 'complete' };
 
-require(path.join(__dirname, '../../Assets/vendor/mjml-browser.js'));
+require(path.join(__dirname, '../../Assets/js/dist/mjml-browser.js'));
 require(path.join(__dirname, '../../Assets/js/dist/contentblocks.editor.js'));
 
 const { buildDocument, extractFragment } = window.CbMjmlEditor;

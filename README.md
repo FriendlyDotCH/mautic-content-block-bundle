@@ -1,32 +1,85 @@
 # MauticContentBlockBundle
 
-## JavaScript / TypeScript Build
+## Development
 
-Source files live in `Assets/js/src/`. Compiled output goes to `Assets/js/dist/` — that is what Mautic loads.
+### Prerequisites
 
-All commands run from the **plugin root** (`plugins/MauticContentBlockBundle/`).
+- A running Mautic dev instance with this plugin in `plugins/MauticContentBlockBundle/`
+  (this repo uses DDEV: `https://tf79formtest.ddev.site:30001`).
+- Node.js 22+ and npm, only for building the JavaScript. Use the one on your machine or the one
+  in the DDEV web container (Node 24). Production installs never need Node: `Assets/js/dist/` is committed.
 
-### Setup
+All `npm` commands run from the **plugin root** (`plugins/MauticContentBlockBundle/`). With DDEV, run
+them in the container instead:
 
 ```bash
-npm install
+ddev exec --dir /var/www/html/plugins/MauticContentBlockBundle npm run watch
 ```
 
-### Commands
+### First-time setup
 
-| Command | Description |
-|---------|-------------|
-| `npm run build` | Production build — minified, no source maps |
-| `npm run build:dev` | Development build — unminified, inline source maps |
-| `npm run watch` | Watch mode — recompiles to `dist/` on every `.ts` save |
+```bash
+# 1. JavaScript dependencies (esbuild, TypeScript, mjml-browser)
+cd plugins/MauticContentBlockBundle
+npm install
+npm run build
 
-### Development workflow
+# 2. Register the plugin and run its migrations (from the Mautic root)
+ddev exec bin/console mautic:plugins:reload
+ddev exec bin/console cache:clear
+```
+
+Then open *Settings > Plugins*. The **Content Blocks** card is already enabled: the integration
+publishes itself when Mautic first creates its row, and it cannot be unpublished (its Enabled/Auth
+tab shows a note instead of the toggle, see `Form/Extension/IntegrationConfigTypeExtension.php`).
+Its *Features* tab holds the plugin's settings.
+The blocks themselves are under *Components > Content Blocks*.
+
+### npm scripts
+
+| Command | What it does |
+|---------|--------------|
+| `npm run build` | Production build: minified, no source maps. **Run this before committing.** |
+| `npm run build:dev` | Development build: unminified, inline source maps |
+| `npm run watch` | `build:dev` that rebuilds on every save |
+| `npm run typecheck` | Type-checks `Assets/js/src/` with `tsc`. esbuild only strips types, so run this before committing too. |
+
+The build is plain esbuild CLI, defined in `package.json` (there is no build script). Every
+top-level `Assets/js/src/*.ts` becomes `Assets/js/dist/*.js`. That includes `mjml-browser.js`,
+bundled from the pinned `mjml-browser` devDependency. To upgrade mjml, bump its version in
+`package.json`, then run `npm install && npm run build` and commit the result.
+
+### Day-to-day workflow
 
 ```bash
 npm run watch
 ```
 
-Leave the terminal open. Edit any file under `Assets/js/src/`, save, then reload the Mautic page — the updated JS is picked up immediately. No PHP restart needed.
+Leave it running, edit files under `Assets/js/src/`, save, and reload the Mautic page. No cache clear is
+needed for JavaScript. `AssetsSubscriber` appends the file's modification time (`?cb=…`) to
+every plugin script, so the browser fetches the new build instead of a cached one.
+
+Other changes need Mautic to pick them up (run from the Mautic root):
+
+| You changed | Run |
+|-------------|-----|
+| JavaScript / TypeScript | nothing (just reload the page) |
+| PHP services, Twig templates, translations, `Config/` | `ddev exec bin/console cache:clear` |
+| Plugin `version` in `Config/config.php`, or added a migration | `ddev exec bin/console mautic:plugins:reload` |
+
+Migrations in `Migrations/` run only when the plugin version in `Config/config.php` goes up. Never edit
+a released migration; add a new `Version_X_Y_Z` class instead.
+
+### Before committing
+
+```bash
+npm run typecheck
+npm run build          # watch leaves unminified dev builds with source maps in dist/
+node Tests/js/contentblocks-editor.test.cjs
+ddev exec bin/phpunit plugins/MauticContentBlockBundle/Tests/Unit
+```
+
+Commit the rebuilt `Assets/js/dist/` together with the source change.
 
 ### Source structure
 
@@ -34,15 +87,19 @@ Leave the terminal open. Edit any file under `Assets/js/src/`, save, then reload
 Assets/js/
 ├── src/
 │   ├── common/
-│   │   └── icons.ts              # Shared SVG icons, flag emojis, helper functions
+│   │   ├── icons.ts              # Shared SVG icons, flag emojis, helper functions
+│   │   └── mjml.ts               # MJML loading/compiling shared by the form and the builder
 │   ├── types/
 │   │   ├── api.ts                # Request / response interfaces for the editor API
-│   │   └── grapesjs.d.ts         # Minimal ambient types for the GrapesJS editor
+│   │   ├── grapesjs.d.ts         # Minimal ambient types for the GrapesJS editor
+│   │   ├── mjml.d.ts             # window.mjml and friends
+│   │   └── mjml-browser.d.ts     # Typing for the untyped mjml-browser package
 │   ├── contentblocks.grapesjs.ts # Email builder plugin (loaded on /s/emails/*)
 │   ├── contentblocks.admin.ts    # Icon rendering on the list and edit form
-│   └── contentblocks.editor.ts   # MJML editor on the block form (live preview)
+│   ├── contentblocks.editor.ts   # MJML editor on the block form (live preview)
+│   └── mjml-browser.ts           # Bundles mjml-browser as window.mjml (loaded on demand)
 └── dist/
-    └── *.js                      # Compiled output — do not edit directly
+    └── *.js                      # Built output, committed. Do not edit by hand.
 ```
 
 ## Content Blocks tab in the builder
@@ -115,8 +172,11 @@ references it, removes the token from future sends and logs an error rather than
 
 One query per sending process loads every published linked block into memory
 (`LinkedBlockResolver`), so a 100k broadcast costs one query, not 100k. The cache is dropped when
-a block is saved or deleted and after `content_block_cache_ttl` seconds (default 60, set in
-`config/local.php`) so long-running workers pick up changes. An email with no linked blocks costs
+a block is saved or deleted and after the cache lifetime (default 60 seconds) so long-running
+workers pick up changes. The lifetime is set under *Plugins > Content Blocks > Features* and is used
+only while that integration is published (it is by default); unpublished or never configured, the
+default applies. Content blocks themselves work either way - the integration only holds settings
+(`Integration/ContentBlocksIntegration.php`, read through `Service/ContentBlockConfigService.php`). An email with no linked blocks costs
 a single `stripos`.
 
 ## MJML block editor
@@ -128,7 +188,7 @@ Mautic has no server-side MJML compiler — the GrapesJS builder also compiles i
 so `contentblocks.editor.ts` does the same:
 
 1. wraps the block's MJML in the selected theme's `<mj-head>` and `<mj-body>` attributes,
-2. compiles it with the vendored `mjml-browser` 4.18 (MIT, `Assets/vendor/`),
+2. compiles it with `mjml-browser` 4.18 (MIT, pinned in `package.json`; bundled to `Assets/js/dist/mjml-browser.js`),
 3. renders the result in a sandboxed preview iframe,
 4. shows the compiled HTML read-only under "Generated HTML".
 
@@ -146,20 +206,14 @@ Theme parts come from `GET /s/content-blocks/editor/theme/{theme}`
 
 ```bash
 node plugins/MauticContentBlockBundle/Tests/js/contentblocks-editor.test.cjs   # build first
-bin/phpunit plugins/MauticContentBlockBundle/Tests/Unit                        # token matching rules
+ddev exec bin/phpunit plugins/MauticContentBlockBundle/Tests/Unit              # token matching, config fallbacks
 ```
 
-The JS test runs against the built `dist/` bundle, so run `npm run build` first.
+The JS test runs against the built `dist/` bundles (including `dist/mjml-browser.js`), so build first.
 
 ### Adding a new script
 
-1. Create `Assets/js/src/your-script.ts`
-2. Add an entry to `build.js`:
-   ```js
-   { in: 'Assets/js/src/your-script.ts', out: 'Assets/js/dist/your-script.js' },
-   ```
-3. Register it in `EventListener/AssetsSubscriber.php`:
-   ```php
-   $assetsEvent->addScript('plugins/MauticContentBlockBundle/Assets/js/dist/your-script.js', 'bodyClose');
-   ```
-4. Run `npm run build` (or keep `npm run watch` running).
+1. Create `Assets/js/src/your-script.ts`. Any top-level file there is built to `Assets/js/dist/your-script.js`;
+   shared code goes in `common/`, typings in `types/`.
+2. If it should load on every admin page, add it to `SCRIPTS` in `EventListener/AssetsSubscriber.php`.
+3. Run `npm run build` (or keep `npm run watch` running).

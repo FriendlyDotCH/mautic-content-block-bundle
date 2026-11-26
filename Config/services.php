@@ -42,8 +42,8 @@ return function (ContainerConfigurator $configurator): void {
     $services->load('MauticPlugin\\MauticContentBlockBundle\\Entity\\', '../Entity/*Repository.php');
     $services->load('MauticPlugin\\MauticContentBlockBundle\\DTO\\', '../DTO/*Request.php');
 
-    /*/$services->set(MauticPlugin\MauticContentBlockBundle\Service\ContentBlockService::class)
-        ->arg('$db', service('doctrine.dbal.default_connection'));*/
+    // Legacy IntegrationHelper looks integrations up by this key; without it the settings row is never created.
+    $services->alias('mautic.integration.contentblocks', MauticPlugin\MauticContentBlockBundle\Integration\ContentBlocksIntegration::class);
 
     $services->set('mautic.content_block.model.content_block', MauticPlugin\MauticContentBlockBundle\Model\ContentBlockModel::class);
 };

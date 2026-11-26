@@ -43,7 +43,7 @@ class EmailSubscriber implements EventSubscriberInterface
     public function __construct(
         private LinkedBlockResolver $resolver,
         private ContentBlockTokenReplacer $replacer,
-        private LoggerInterface $mauticLogger
+        private LoggerInterface $mauticLogger,
     ) {
     }
 

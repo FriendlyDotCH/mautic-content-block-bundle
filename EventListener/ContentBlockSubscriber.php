@@ -16,7 +16,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 class ContentBlockSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private LinkedBlockResolver $resolver
+        private LinkedBlockResolver $resolver,
     ) {
     }
 
