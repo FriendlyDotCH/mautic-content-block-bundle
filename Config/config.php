@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 return [
-    'name'        => 'Content Blocks',
+    'name'        => 'Friendly Content Blocks Plugin',
     'description' => 'Reusable saved content blocks for the GrapesJS page/email builder.',
-    'version'     => '2.6.0',
+    'version'     => '7.1.0',
     'author'      => 'Friendly Automate',
 
     'routes' => [
@@ -68,7 +68,10 @@ return [
     ],
 
     'categories' => [
-        'content_block' => 'mautic.contentblock.menu.index',
+        'content_block' => [
+            'class' => MauticPlugin\MauticContentBlockBundle\Entity\ContentBlock::class,
+            'label' => 'mautic.contentblock.menu.index',
+        ],
     ],
 
     'services' => [],

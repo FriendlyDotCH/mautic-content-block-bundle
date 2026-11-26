@@ -30,8 +30,7 @@ class ContentBlockModel extends FormModel
     #[Required]
     public function setCategoryModel(
         CategoryModel $categoryModel
-    ): void
-    {
+    ): void {
         $this->categoryModel = $categoryModel;
     }
 
@@ -122,7 +121,7 @@ class ContentBlockModel extends FormModel
             return null;
         }
 
-        if (empty($event)) {
+        if (!$event instanceof Event) {
             $event = new ContentBlockEvent($entity, $isNew);
             $event->setEntityManager($this->em);
         }

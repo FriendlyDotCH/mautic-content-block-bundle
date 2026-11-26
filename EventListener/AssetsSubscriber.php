@@ -8,6 +8,7 @@ use Mautic\CoreBundle\CoreEvents;
 use Mautic\CoreBundle\Event\CustomAssetsEvent;
 use Mautic\CoreBundle\Helper\CoreParametersHelper;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class AssetsSubscriber implements EventSubscriberInterface
 {
@@ -21,6 +22,7 @@ class AssetsSubscriber implements EventSubscriberInterface
 
     public function __construct(
         private CoreParametersHelper $coreParametersHelper,
+        private readonly RequestStack $requestStack,
     ) {
     }
 
@@ -33,6 +35,16 @@ class AssetsSubscriber implements EventSubscriberInterface
 
     public function injectAssets(CustomAssetsEvent $assetsEvent): void
     {
+        // CoreEvents::VIEW_INJECT_CUSTOM_ASSETS fires on every request, including public
+        // pages rendered from a theme (landing pages, forms). Those templates call
+        // outputScripts('bodyClose') too, but never load script.html.twig, so globals like
+        // mauticBasePath don't exist there. Restrict injection to the admin area, matching
+        // GrapesJsBuilderBundle\EventSubscriber\AssetsSubscriber::isMauticAdministrationPage(),
+        // to avoid a ReferenceError on mauticBasePath on public-facing pages.
+        if (!$this->isMauticAdministrationPage()) {
+            return;
+        }
+
         // Loaded globally so Mautic.contentBlockOnLoad is always pre-registered.
         // Mautic's AJAX navigation does not re-inject bodyClose scripts, so the
         // callback must exist from the initial full-page load regardless of which
@@ -56,5 +68,23 @@ class AssetsSubscriber implements EventSubscriberInterface
         $mtime    = isset($bundle['directory']) ? @filemtime($bundle['directory'].'/Assets/js/dist/'.$script) : false;
 
         return $mtime ? $relative.'?cb='.$mtime : $relative;
+    }
+
+    /**
+     * Returns true for routes that start with /s/, excluding the ones known to
+     * render a bare public-style template (no script.html.twig, no mauticBasePath)
+     * despite living under the admin path prefix.
+     */
+    private function isMauticAdministrationPage(): bool
+    {
+        $request = $this->requestStack->getCurrentRequest();
+
+        if (null === $request || preg_match('/^\/s\//', $request->getPathInfo()) < 1) {
+            return false;
+        }
+
+        // /s/forms/preview/{id} dispatches to FormController::previewAction, which
+        // renders the same bare form.html.twig used by the public preview route.
+        return 'mautic_form_action' !== $request->attributes->get('_route') || 'preview' !== $request->attributes->get('objectAction');
     }
 }

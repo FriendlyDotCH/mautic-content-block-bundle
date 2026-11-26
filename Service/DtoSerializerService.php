@@ -16,7 +16,7 @@ class DtoSerializerService
      */
     public function serializeCollection(array $dtos): array
     {
-        return array_map(fn (SerializableDtoInterface $dto) => $dto->toArray(), $dtos);
+        return array_map(fn (SerializableDtoInterface $dto): array => $dto->toArray(), $dtos);
     }
 
     /**

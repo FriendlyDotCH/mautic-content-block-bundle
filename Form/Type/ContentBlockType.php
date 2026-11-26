@@ -35,8 +35,8 @@ class ContentBlockType extends AbstractType
                 'required'    => true,
                 'empty_data'  => '',
                 'constraints' => [
-                    new NotBlank(['message' => 'mautic.core.value.required']),
-                    new Length(['max' => 100]),
+                    new NotBlank(message: 'mautic.core.value.required'),
+                    new Length(max: 100),
                 ],
             ])
             // Category input hidden for now; new blocks default to General
@@ -78,7 +78,7 @@ class ContentBlockType extends AbstractType
                 'required'    => false,
                 'empty_data'  => '',
                 'constraints' => [
-                    new Length(['max' => 30000]),
+                    new Length(max: 30000),
                 ],
             ])
             ->add('buttons', FormButtonsType::class);

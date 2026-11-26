@@ -1,6 +1,76 @@
 # MauticContentBlockBundle
 
 ## Development
+Reusable, saved content blocks for the Mautic 5/7 GrapesJS page and email builder.
+
+Editors can save a selection from the GrapesJS canvas as a named block (with an
+optional icon/thumbnail and category), then reuse it across other emails and
+pages via the block panel. Blocks are stored as their own entity
+(`friendly_content_blocks`) with full CRUD exposed both as a Mautic-native
+CRUD controller (`/content-blocks/...`, list/view/edit/delete UI) and as an
+AJAX API consumed by the GrapesJS editor (`/content-blocks/editor`, used to
+list, create, update and delete blocks from within the builder). Access is
+gated by the plugin's own permissions (`contentBlock:blocks:*`).
+
+## Requirements
+
+- Mautic **7.0** (`mautic/core-lib: ^7.0`)
+- PHP **8.2 – 8.5**
+- Node.js (for building the GrapesJS plugin assets, see below)
+
+## Installing
+
+Pick one of the two methods below to get the code in place, then run the
+shared "Enable the plugin" steps.
+
+### Option A — via Composer
+
+The package is published on Packagist as
+[`friendly/mautic-content-block-bundle`](https://packagist.org/packages/friendly/mautic-content-block-bundle).
+Mautic ships with `composer/installers`, which understands this plugin's
+`type: mautic-plugin` and its `extra.install-directory-name` and will place it
+at `plugins/MauticContentBlockBundle` automatically.
+
+From the **Mautic root**, require the package:
+
+```bash
+composer require friendly/mautic-content-block-bundle
+```
+
+### Option B — place directly in the plugins folder
+
+Download or clone the plugin into your Mautic instance's `plugins/`
+directory, making sure the directory name is exactly
+`MauticContentBlockBundle` — Mautic discovers plugins by folder name.
+
+```bash
+cd <mautic-root>/plugins
+git clone git@github.com:friendly/mautic-content-block-bundle.git MauticContentBlockBundle
+```
+
+### Enable the plugin (both options)
+
+1. From the Mautic root, install/refresh the plugin so Mautic picks up its
+   routes, permissions and database schema:
+   ```bash
+   bin/console mautic:plugins:install
+   # or, if the plugin was already installed before and you just changed PHP:
+   bin/console mautic:plugins:reload
+   bin/console cache:clear
+   ```
+   This runs the plugin's `Migrations/` to create the `friendly_content_blocks`
+   table.
+2. Build the plugin's JavaScript (see below) so the GrapesJS integration is
+   available in the email/page builder.
+3. Log in to Mautic and check **Settings > Plugins** — "Friendly Content
+   Blocks Plugin" should be listed, and a **Content Blocks** entry should
+   appear in the main menu.
+
+If you're using the DDEV-based Mautic setup (`ddev start` from the Mautic
+root), run the commands above with `ddev exec` (or `ddev ssh` first), e.g.
+`ddev exec bin/console mautic:plugins:install`.
+
+## JavaScript / TypeScript Build
 
 ### Prerequisites
 
