@@ -56,7 +56,10 @@ return [
     ],
 
     'categories' => [
-        'content_block' => 'mautic.contentblock.menu.index',
+        'content_block' => [
+            'class' => MauticPlugin\MauticContentBlockBundle\Entity\ContentBlock::class,
+            'label' => 'mautic.contentblock.menu.index',
+        ],
     ],
 
     'services' => [],

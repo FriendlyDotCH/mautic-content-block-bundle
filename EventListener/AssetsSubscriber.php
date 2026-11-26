@@ -58,12 +58,6 @@ class AssetsSubscriber implements EventSubscriberInterface
 
         // /s/forms/preview/{id} dispatches to FormController::previewAction, which
         // renders the same bare form.html.twig used by the public preview route.
-        if ('mautic_form_action' === $request->attributes->get('_route')
-            && 'preview' === $request->attributes->get('objectAction')
-        ) {
-            return false;
-        }
-
-        return true;
+        return 'mautic_form_action' !== $request->attributes->get('_route') || 'preview' !== $request->attributes->get('objectAction');
     }
 }
