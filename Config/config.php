@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'name'        => 'Friendly Content Blocks Plugin',
     'description' => 'Reusable saved content blocks for the GrapesJS page/email builder.',
-    'version'     => '7.0.1',
+    'version'     => '7.1.0',
     'author'      => 'Friendly Automate',
 
     'routes' => [
@@ -32,6 +32,18 @@ return [
                 'method'       => 'DELETE',
                 'requirements' => ['id' => '\d+'],
             ],
+            'mautic_contentblock_editor_linked' => [
+                'path'       => '/content-blocks/editor/linked',
+                'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockGrapeController::class.'::linkedBlocksAction',
+                'method'     => 'GET',
+            ],
+            'mautic_contentblock_editor_theme' => [
+                'path'         => '/content-blocks/editor/theme/{theme}',
+                'controller'   => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockGrapeController::class.'::themeAction',
+                'method'       => 'GET',
+                'requirements' => ['theme' => '[A-Za-z0-9_-]+'],
+            ],
+
             'mautic_contentblock_index' => [
                 'path'       => '/content-blocks/{page}',
                 'controller' => MauticPlugin\MauticContentBlockBundle\Controller\ContentBlockController::class.'::indexAction',
@@ -63,6 +75,4 @@ return [
     ],
 
     'services' => [],
-
-    'parameters' => [],
 ];

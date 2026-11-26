@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace MauticPlugin\MauticContentBlockBundle\Controller;
 
 use Mautic\CoreBundle\Controller\AjaxController;
+use Mautic\CoreBundle\Helper\InputHelper;
 use Mautic\CoreBundle\Security\Permissions\CorePermissions;
 use MauticPlugin\MauticContentBlockBundle\Exception\AjaxException;
 use MauticPlugin\MauticContentBlockBundle\Exception\ApiErrors;
 use MauticPlugin\MauticContentBlockBundle\Service\ContentBlockRequestService;
 use MauticPlugin\MauticContentBlockBundle\Service\ContentBlockService;
 use MauticPlugin\MauticContentBlockBundle\Service\DtoSerializerService;
+use MauticPlugin\MauticContentBlockBundle\Service\LinkedBlockResolver;
+use MauticPlugin\MauticContentBlockBundle\Service\ThemeMjmlProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,6 +25,8 @@ class ContentBlockGrapeController extends AjaxController
         private readonly DtoSerializerService $contentBlockSerializer,
         private readonly LoggerInterface $mauticLogger,
         private readonly ContentBlockRequestService $contentBlockRequestService,
+        private readonly ThemeMjmlProvider $themeMjmlProvider,
+        private readonly LinkedBlockResolver $linkedBlockResolver,
         CorePermissions $security,
     ) {
         $this->security = $security;
@@ -82,11 +87,11 @@ class ContentBlockGrapeController extends AjaxController
             $dto = $this->contentBlockRequestService->parseAddBlockPayload($request->getContent());
             $this->contentBlockRequestService->validateAddBlockPayload($dto);
 
-            $this->contentBlockService->addBlock($dto);
-            $data = $this->contentBlockSerializer->serialize($dto);
+            // The saved block, not the request: the builder needs its id to link to it.
+            $saved = $this->contentBlockService->addBlock($dto);
 
             return $this->sendJsonResponse([
-                'block'   => $data,
+                'block'   => $this->contentBlockSerializer->serialize($saved),
                 'success' => true,
             ], Response::HTTP_CREATED);
         } catch (AjaxException $e) {
@@ -180,5 +185,50 @@ class ContentBlockGrapeController extends AjaxController
                 'success' => false,
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * <mj-head> and <mj-body> attributes of an email theme, so the block editor can compile
+     * its preview in that theme's context. Read-only, so viewing a block is enough.
+     */
+    public function themeAction(string $theme): Response
+    {
+        if (!$this->security->isGranted(['contentBlock:blocks:viewown', 'contentBlock:blocks:viewother'], 'MATCH_ONE')) {
+            return $this->sendJsonResponse([
+                'error'   => 'Access denied',
+                'success' => false,
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        return $this->sendJsonResponse(
+            $this->themeMjmlProvider->getThemeParts(InputHelper::alphanum($theme, false, null, ['-', '_']))
+        );
+    }
+
+    /**
+     * Compiled HTML of every published linked block, so the GrapesJS canvas can draw them
+     * in place instead of showing a bare {contentblock=<id>} token. One request per builder opening.
+     */
+    public function linkedBlocksAction(): Response
+    {
+        if (!$this->security->isGranted(['contentBlock:blocks:viewown', 'contentBlock:blocks:viewother'], 'MATCH_ONE')) {
+            return $this->sendJsonResponse([
+                'error'   => 'Access denied',
+                'success' => false,
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        $canEdit = $this->security->isGranted(
+            ['contentBlock:blocks:editown', 'contentBlock:blocks:editother', 'contentBlock:blocks:full'],
+            'MATCH_ONE'
+        );
+
+        return $this->sendJsonResponse([
+            'blocks'  => $this->linkedBlockResolver->getBuilderData(),
+            'editUrl' => $canEdit
+                ? $this->generateUrl('mautic_contentblock_action', ['objectAction' => 'edit', 'objectId' => '__ID__'])
+                : null,
+            'success' => true,
+        ]);
     }
 }

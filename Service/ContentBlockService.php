@@ -25,6 +25,7 @@ class ContentBlockService
         $dto->setCategory($entity->getCategory()?->getTitle());
         $dto->setHtmlContent($entity->getHtmlContent());
         $dto->setThumbnail($entity->getThumbnail());
+        $dto->setLinked($entity->isLinked());
 
         return $dto;
     }
@@ -71,6 +72,9 @@ class ContentBlockService
         $entity->setIcon($dto->getIcon());
         $entity->setThumbnail(null);
         $entity->setIsPublished(true);
+        $entity->setLinked($dto->isLinked());
+        $entity->setCompiledHtml($dto->isLinked() ? $dto->getCompiledHtml() : null);
+        $entity->setTheme($dto->getTheme());
         // Category is defaulted to General by ContentBlockModel::saveEntity().
 
         $this->contentBlockModel->saveEntity($entity);

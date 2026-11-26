@@ -6,12 +6,22 @@ namespace MauticPlugin\MauticContentBlockBundle\EventListener;
 
 use Mautic\CoreBundle\CoreEvents;
 use Mautic\CoreBundle\Event\CustomAssetsEvent;
+use Mautic\CoreBundle\Helper\CoreParametersHelper;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 class AssetsSubscriber implements EventSubscriberInterface
 {
+    private const BUNDLE = 'MauticContentBlockBundle';
+
+    private const SCRIPTS = [
+        'contentblocks.admin.js',
+        'contentblocks.grapesjs.js',
+        'contentblocks.editor.js',
+    ];
+
     public function __construct(
+        private CoreParametersHelper $coreParametersHelper,
         private readonly RequestStack $requestStack,
     ) {
     }
@@ -39,8 +49,25 @@ class AssetsSubscriber implements EventSubscriberInterface
         // Mautic's AJAX navigation does not re-inject bodyClose scripts, so the
         // callback must exist from the initial full-page load regardless of which
         // route the user lands on first.
-        $assetsEvent->addScript('plugins/MauticContentBlockBundle/Assets/js/dist/contentblocks.admin.js', 'bodyClose');
-        $assetsEvent->addScript('plugins/MauticContentBlockBundle/Assets/js/dist/contentblocks.grapesjs.js', 'bodyClose');
+        // contentblocks.editor.js activates only on the block form; the 1.3 MB mjml-browser
+        // compiler it drives is fetched on demand, not from here.
+        foreach (self::SCRIPTS as $script) {
+            $assetsEvent->addScript($this->versioned($script), 'bodyClose');
+        }
+    }
+
+    /**
+     * Mautic versions asset URLs with sha1(secret_key + Mautic version), which does not change
+     * when a plugin ships new JavaScript - so browsers keep serving the previously cached file
+     * until a hard reload. Appending the build's mtime makes every rebuild a new URL.
+     */
+    private function versioned(string $script): string
+    {
+        $bundle   = $this->coreParametersHelper->get('plugin.bundles')[self::BUNDLE] ?? [];
+        $relative = ($bundle['relative'] ?? 'plugins/'.self::BUNDLE).'/Assets/js/dist/'.$script;
+        $mtime    = isset($bundle['directory']) ? @filemtime($bundle['directory'].'/Assets/js/dist/'.$script) : false;
+
+        return $mtime ? $relative.'?cb='.$mtime : $relative;
     }
 
     /**

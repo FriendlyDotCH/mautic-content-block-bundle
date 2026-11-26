@@ -17,13 +17,4 @@ class MauticContentBlockExtension extends Extension /* implements PrependExtensi
         $loader = new PhpFileLoader($container, new FileLocator(__DIR__.'/../Config'));
         $loader->load('services.php');
     }
-
-    /*public function prepend(ContainerBuilder $container): void
-    {
-        $container->prependExtensionConfig('twig', [
-            'paths' => [
-                \dirname(__DIR__).'/Views' => 'MauticContentBlock',
-            ],
-        ]);
-    }*/
 }

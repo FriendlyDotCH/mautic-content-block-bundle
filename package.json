@@ -4,12 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build":     "node build.js --minify",
-    "build:dev": "node build.js",
-    "watch":     "node build.js --watch"
+    "build": "esbuild \"Assets/js/src/*.ts\" --bundle --format=iife --target=es2022 --outdir=Assets/js/dist --minify",
+    "build:dev": "esbuild \"Assets/js/src/*.ts\" --bundle --format=iife --target=es2022 --outdir=Assets/js/dist --sourcemap=inline",
+    "watch": "npm run build:dev -- --watch",
+    "typecheck": "tsc -p ."
   },
   "devDependencies": {
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.28.2",
+    "mjml-browser": "4.18.0",
     "typescript": "^5.7.0"
   }
 }
